@@ -2,35 +2,15 @@ import React from "react";
 import { SafeAreaView, View, ScrollView, Image, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "./BottomNavBar"; // Asegúrate de importar el componente
+import Greeting from "./Greeting";
 
 const RestrictionsList = () => {
   const navigation = useNavigation();
 
-  // Función para obtener la fecha actual en el formato deseado
-  const getCurrentDate = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}.${month}.${day}`;
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* Header con nombre, fecha y flecha de retroceso */}
-        <View style={styles.header}>
-          <View style={styles.profileContainer}>
-            <Image
-              source={{ uri: "https://cdn-icons-png.flaticon.com/512/64/64572.png" }} // Ícono de perfil
-              style={styles.profileIcon}
-            />
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerName}>Hi, Ana!</Text>
-              <Text style={styles.headerDate}>{getCurrentDate()}</Text>
-            </View>
-          </View>
-        </View>
+        <Greeting name="Ana" />
 
         {/* Título "Restricciones" en negrita con arrowBack a la izquierda */}
         <View style={styles.titleContainer}>
@@ -96,16 +76,17 @@ const RestrictionsList = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Botón "+" para crear restricción */}
+        
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate("CreateRestriction")}
         >
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
+
+        <BottomNavBar />
       </ScrollView>
-      <BottomNavBar /> {/* Aquí se integra el componente BottomNavBar */}
-    </SafeAreaView>
+      </SafeAreaView>
   );
 };
 
@@ -149,9 +130,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   arrowBack: {
-    width: 24,
-    height: 24,
-    marginRight: 16,
+    width: 18,
+    height: 18,
+    marginRight: 90,
   },
   titleText: {
     color: "#1C1B1F",
@@ -221,7 +202,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: "absolute",
-    bottom: 20,
+    bottom: 80,
     right: 20,
     width: 50,
     height: 50,

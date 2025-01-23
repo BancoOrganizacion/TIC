@@ -5,7 +5,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 // Importa las pantallas
 import SplashScreen from "./screens/SplashScreen";
 import Login from "./screens/Login";
-import Home from "./screens/RestrictionsList";
+import Home from "./screens/Home";
 import Register from "./screens/Register";
 import Code from "./screens/Code";  
 import RestrictionsList from "./screens/RestrictionsList";
