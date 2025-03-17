@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Image, Text, StyleSheet } from "react-native";
 
-const Greeting = ({ name }) => {
+const Greeting = ({ name, style }) => {
   const getCurrentDate = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -12,15 +12,14 @@ const Greeting = ({ name }) => {
   };
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.container, style]}>
       <Image
         source={{
           uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e8ba1347-b50c-4c6f-aeb8-655ea0c40b5a",
         }}
-        resizeMode={"stretch"}
         style={styles.image}
       />
-      <View style={styles.column}>
+      <View style={styles.textContainer}>
         <Text style={styles.dateText}>{getCurrentDate()}</Text>
         <Text style={styles.greetingText}>Hi, {name}!</Text>
       </View>
@@ -29,29 +28,30 @@ const Greeting = ({ name }) => {
 };
 
 const styles = StyleSheet.create({
-  row: {
+  container: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
-    marginLeft: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   image: {
     width: 24,
     height: 24,
-    marginRight: 16,
+    marginRight: 12,
   },
-  column: {
-    flexDirection: "column",
+  textContainer: {
+    flex: 1,
+    justifyContent: "center",
   },
   dateText: {
     color: "#737373",
-    fontSize: 11,
+    fontSize: 12,
     marginBottom: 4,
   },
   greetingText: {
     color: "#000000",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
 });
 

@@ -5,13 +5,13 @@ import {
   ScrollView,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import Button from "../components/Button";
 
-// Componente personalizado para el checkbox
+
 const CustomCheckbox = ({ isSelected, onToggle }) => {
   return (
     <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
@@ -23,7 +23,7 @@ const CustomCheckbox = ({ isSelected, onToggle }) => {
 export default (props) => {
   const [textInput1, onChangeTextInput1] = useState("");
   const [textInput2, onChangeTextInput2] = useState("");
-  const [isSelected, setSelection] = useState(false); // Estado para el checkbox
+  const [isSelected, setSelection] = useState(false);
   const navigation = useNavigation();
 
   const handleLogin = () => {
@@ -45,7 +45,7 @@ export default (props) => {
 
         <Text style={styles.label}>{"Nombre"}</Text>
         <TextInput
-          placeholder={"Ingresa tu nombre"}
+          placeholder={"Ingresa tu usuario"}
           value={textInput1}
           onChangeText={onChangeTextInput1}
           style={styles.input}
@@ -70,13 +70,12 @@ export default (props) => {
           <Text style={styles.forgotPassword}>{"Olvidaste tu contraseña"}</Text>
         </View>
 
-        <View style={styles.loginButtonContainer}>
-          <Button
-            title="Iniciar sesión"
-            onPress={handleLogin}
-            color="#5C2684"
-          />
-        </View>
+        {/* Usa el componente Button personalizado */}
+        <Button
+          title="Iniciar sesión"
+          onPress={handleLogin}
+          style={styles.loginButton}
+        />
 
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>{"No tienes una cuenta aún?"}</Text>
@@ -161,7 +160,7 @@ const styles = StyleSheet.create({
     color: "#57435C",
     fontSize: 14,
   },
-  loginButtonContainer: {
+  loginButton: {
     marginHorizontal: 23,
     marginBottom: 21,
   },

@@ -10,23 +10,23 @@ import {
   TextInput,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons"; // Para el ícono de flecha
+import { Ionicons } from "@expo/vector-icons";
 
 export default (props) => {
-  const [code, setCode] = useState(["", "", "", ""]); // Estado para los inputs del código
-  const [resendDisabled, setResendDisabled] = useState(false); // Estado para deshabilitar el botón de reenviar
-  const [countdown, setCountdown] = useState(180); // Contador regresivo de 3 minutos (180 segundos)
+  const [code, setCode] = useState(["", "", "", ""]); 
+  const [resendDisabled, setResendDisabled] = useState(false); 
+  const [countdown, setCountdown] = useState(180); 
   const navigation = useNavigation();
 
-  // Función para manejar el reenvío del código
+  
   const handleResendCode = () => {
-    setResendDisabled(true); // Deshabilita el botón
-    setCountdown(180); // Reinicia el contador a 3 minutos
+    setResendDisabled(true); 
+    setCountdown(180); 
 
-    // Simula el envío del código
+    
     alert("Código reenviado");
 
-    // Inicia el contador regresivo
+    
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev === 1) {
