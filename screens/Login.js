@@ -7,10 +7,12 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Button from "../components/Button";
-
+import { authService } from "../services/api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomCheckbox = ({ isSelected, onToggle }) => {
   return (
@@ -21,19 +23,61 @@ const CustomCheckbox = ({ isSelected, onToggle }) => {
 };
 
 export default (props) => {
-  const [textInput1, onChangeTextInput1] = useState("");
-  const [textInput2, onChangeTextInput2] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isSelected, setSelection] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
-  const handleLogin = () => {
-    // Lógica de autenticación
-    navigation.navigate("Home");
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert("Error", "Por favor ingrese su nombre de usuario y contraseña");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await authService.login(username, password);
+      const token = response.data.access_token;
+      
+      // Guardar el token en AsyncStorage
+      await AsyncStorage.setItem('token', token);
+      
+      // Si la opción "Recordarme" está seleccionada, guardar también el nombre de usuario
+      if (isSelected) {
+        await AsyncStorage.setItem('savedUsername', username);
+      } else {
+        await AsyncStorage.removeItem('savedUsername');
+      }
+      
+      navigation.navigate("Home");
+    } catch (error) {
+      console.error('Error de login:', error);
+      Alert.alert(
+        "Error de inicio de sesión", 
+        "Credenciales inválidas. Por favor intente nuevamente."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRegister = () => {
     navigation.navigate("Register");
   };
+
+  // Verificar si hay un nombre de usuario guardado al cargar la pantalla
+  React.useEffect(() => {
+    const checkSavedUsername = async () => {
+      const savedUsername = await AsyncStorage.getItem('savedUsername');
+      if (savedUsername) {
+        setUsername(savedUsername);
+        setSelection(true);
+      }
+    };
+    
+    checkSavedUsername();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -43,19 +87,20 @@ export default (props) => {
           {"Únete a nuestra comunidad. ¡Te estamos esperando!"}
         </Text>
 
-        <Text style={styles.label}>{"Nombre"}</Text>
+        <Text style={styles.label}>{"Nombre de usuario"}</Text>
         <TextInput
           placeholder={"Ingresa tu usuario"}
-          value={textInput1}
-          onChangeText={onChangeTextInput1}
+          value={username}
+          onChangeText={setUsername}
           style={styles.input}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>{"Contraseña"}</Text>
         <TextInput
           placeholder={"Ingresa tu contraseña"}
-          value={textInput2}
-          onChangeText={onChangeTextInput2}
+          value={password}
+          onChangeText={setPassword}
           secureTextEntry
           style={styles.input}
         />
@@ -70,11 +115,11 @@ export default (props) => {
           <Text style={styles.forgotPassword}>{"Olvidaste tu contraseña"}</Text>
         </View>
 
-        {/* Usa el componente Button personalizado */}
         <Button
           title="Iniciar sesión"
           onPress={handleLogin}
           style={styles.loginButton}
+          disabled={isLoading}
         />
 
         <View style={styles.registerContainer}>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from 'axios';
 import {
   SafeAreaView,
   View,
@@ -7,28 +8,129 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker"; 
 import BackButton from "../components/BackButton";
+import { userService } from "../services/api";
+const API_USERS = 'http://10.0.2.2:3001';
 
 export default (props) => {
-  const [textInput1, onChangeTextInput1] = useState("");
-  const [textInput2, onChangeTextInput2] = useState("");
-  const [textInput3, onChangeTextInput3] = useState("");
-  const [textInput4, onChangeTextInput4] = useState("");
-  const [textInput5, onChangeTextInput5] = useState("");
-  const [textInput6, onChangeTextInput6] = useState("");
-  const [selectedGender, setSelectedGender] = useState(""); 
-  const [textInput8, onChangeTextInput8] = useState("");
-  const [textInput9, onChangeTextInput9] = useState("");
-  const [textInput10, onChangeTextInput10] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [codigoPais, setCodigoPais] = useState("+593");
+  const [email, setEmail] = useState("");
+  const [nombreUsuario, setNombreUsuario] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const ROL_USUARIO_ID = "67d8565e668d308ad20654cc";
 
   const handleGoBack = () => {
     props.navigation.goBack();
   };
 
-  const handleNext = () => {
-    props.navigation.navigate("Code"); 
+  const validateForm = () => {
+    if (!nombre || !apellido || !cedula || !email || !nombreUsuario || !password) {
+      Alert.alert("Error", "Por favor complete todos los campos obligatorios (*)");
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Correo electrónico inválido");
+      return false;
+    }
+
+    if (!/^\d{10}$/.test(cedula)) {
+      Alert.alert("Error", "La cédula debe tener 10 dígitos numéricos");
+      return false;
+    }
+
+    return true;
+  };
+
+
+  const handleNext = async () => {
+    if (!validateForm()) return;
+  
+    setIsLoading(true);
+    try {
+      // Add the connection test here
+      try {
+        const testResponse = await axios.get(`${API_USERS}/roles`);
+        console.log("Conexión exitosa - Roles:", testResponse.data);
+      } catch (testError) {
+        console.error("Error de prueba de conexión:", testError);
+        Alert.alert("Error de conexión", 
+          "No se pudo conectar con el servidor. Verifica que el servidor esté en ejecución y sea accesible.");
+        setIsLoading(false);
+        return;
+      }
+      console.log("Intentando registrar usuario...");
+      
+      // Preparar los datos según la estructura esperada por tu backend
+      const userData = {
+        nombre: nombre,
+        apellido: apellido,
+        cedula: cedula,
+        email: email,
+        telefono: telefono ? (telefono.startsWith('0') ? telefono : `0${telefono}`) : undefined,
+        rol: ROL_USUARIO_ID,
+        nombre_usuario: nombreUsuario,
+        contraseña: password 
+      };
+  
+      console.log("Datos de usuario:", JSON.stringify(userData, null, 2));
+  
+      const response = await userService.createUser(userData);
+      console.log("Respuesta del servidor:", response.data);
+      
+      Alert.alert(
+        "Registro exitoso", 
+        "Tu cuenta ha sido creada correctamente.",
+        [{ 
+          text: "Iniciar sesión", 
+          onPress: () => props.navigation.navigate("Login") 
+        }]
+      );
+    } catch (error) {
+      console.error('Error al registrar usuario:', error);
+      
+      let errorMsg = "Error al crear la cuenta";
+      
+      if (error.response) {
+        // El servidor respondió con un código de estado fuera del rango 2xx
+        console.log('Datos de error:', error.response.data);
+        console.log('Estado:', error.response.status);
+        
+        if (error.response.status === 409) {
+          errorMsg = "Este usuario o cédula ya está registrado";
+        } else if (error.response.data && error.response.data.message) {
+          errorMsg = error.response.data.message;
+        }
+      } else if (error.request) {
+        // La solicitud se realizó pero no se recibió respuesta
+        console.log('Solicitud sin respuesta:', error.request);
+        errorMsg = "No se pudo conectar con el servidor. Verifica tu conexión a internet y que el servidor esté en ejecución.";
+      } else {
+        // Ocurrió un error durante la configuración de la solicitud
+        console.log('Error de configuración:', error.message);
+        errorMsg = "Error en la configuración de la solicitud: " + error.message;
+      }
+      
+      Alert.alert("Error", errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,98 +141,96 @@ export default (props) => {
           <Text style={styles.title}>Registro</Text>
         </View>
 
-        <Text style={styles.text2}>Nombre*</Text>
+        <Text style={styles.label}>Nombre*</Text>
         <TextInput
           placeholder="Ingresa tu nombre"
-          value={textInput1}
-          onChangeText={onChangeTextInput1}
+          value={nombre}
+          onChangeText={setNombre}
           style={styles.input}
         />
 
-        <Text style={styles.text3}>Cédula*</Text>
+        <Text style={styles.label}>Apellido*</Text>
         <TextInput
-          placeholder="Ingresa tu cédula"
-          value={textInput2}
-          onChangeText={onChangeTextInput2}
-          style={styles.input2}
+          placeholder="Ingresa tu apellido"
+          value={apellido}
+          onChangeText={setApellido}
+          style={styles.input}
         />
 
-        <Text style={styles.text3}>Número de teléfono</Text>
-        <View style={styles.row2}>
+        <Text style={styles.label}>Cédula*</Text>
+        <TextInput
+          placeholder="Ingresa tu cédula"
+          value={cedula}
+          onChangeText={setCedula}
+          keyboardType="numeric"
+          maxLength={10}
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Número de teléfono</Text>
+        <View style={styles.phoneContainer}>
           <TextInput
             placeholder="+593"
-            value={textInput3}
-            onChangeText={onChangeTextInput3}
-            style={styles.input3}
+            value={codigoPais}
+            onChangeText={setCodigoPais}
+            style={styles.countryCodeInput}
           />
           <TextInput
             placeholder="0999999999"
-            value={textInput4}
-            onChangeText={onChangeTextInput4}
-            style={styles.input4}
+            value={telefono}
+            onChangeText={setTelefono}
+            keyboardType="numeric"
+            style={styles.phoneInput}
           />
         </View>
 
-        <Text style={styles.text4}>Correo</Text>
+        <Text style={styles.label}>Correo*</Text>
         <TextInput
           placeholder="name@example.com"
-          value={textInput5}
-          onChangeText={onChangeTextInput5}
-          style={styles.input5}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          style={styles.input}
         />
 
-        <View style={styles.row3}>
-          <Text style={styles.text5}>Día de nacimiento</Text>
-          <Text style={styles.text6}>Género</Text>
-        </View>
-        <View style={styles.row4}>
-          <TextInput
-            placeholder="dd/mm/aaaa"
-            value={textInput6}
-            onChangeText={onChangeTextInput6}
-            style={styles.input6}
-          />
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedGender}
-              onValueChange={(itemValue) => setSelectedGender(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Femenino" value="Femenino" />
-              <Picker.Item label="Masculino" value="Masculino" />
-            </Picker>
-          </View>
-        </View>
-
-        <Text style={styles.text7}>Dirección</Text>
+        <Text style={styles.label}>Nombre de usuario*</Text>
         <TextInput
-          placeholder="Ingresa tu dirección"
-          value={textInput8}
-          onChangeText={onChangeTextInput8}
-          style={styles.input8}
+          placeholder="Ingresa un nombre de usuario"
+          value={nombreUsuario}
+          onChangeText={setNombreUsuario}
+          autoCapitalize="none"
+          style={styles.input}
         />
 
-        <Text style={styles.text8}>Contraseña</Text>
+        <Text style={styles.label}>Contraseña*</Text>
         <TextInput
           placeholder="Ingresa una contraseña"
-          value={textInput9}
-          onChangeText={onChangeTextInput9}
+          value={password}
+          onChangeText={setPassword}
           secureTextEntry
-          style={styles.input9}
+          style={styles.input}
         />
 
-        <Text style={styles.text9}>Confirma tu contraseña</Text>
+        <Text style={styles.label}>Confirma tu contraseña*</Text>
         <TextInput
           placeholder="Ingresa la contraseña otra vez"
-          value={textInput10}
-          onChangeText={onChangeTextInput10}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
           secureTextEntry
-          style={styles.input10}
+          style={styles.input}
         />
 
-        {/* Botón de Siguiente */}
-        <TouchableOpacity onPress={handleNext} style={styles.button}>
-          <Text style={styles.buttonText}>Siguiente</Text>
+        <TouchableOpacity 
+          onPress={handleNext} 
+          style={[styles.button, isLoading && styles.disabledButton]}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Registrarse</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -142,11 +242,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    paddingTop: 20,
+  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 45,
+    marginBottom: 30,
     marginHorizontal: 20,
   },
   title: {
@@ -154,185 +259,50 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
-    flex: 1, 
-  },
-  row2: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 11,
-    marginHorizontal: 22,
-  },
-  row3: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 5,
-    marginHorizontal: 31,
-  },
-  row4: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 7,
-    marginHorizontal: 22,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    marginTop: 99,
-  },
-  text2: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 4,
-    marginLeft: 37,
-  },
-  text3: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 5,
-    marginLeft: 35,
-  },
-  text4: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 5,
-    marginLeft: 36,
-  },
-  text5: {
-    color: "#737373",
-    fontSize: 15,
-    marginRight: 49,
-  },
-  text6: {
-    color: "#737373",
-    fontSize: 15,
     flex: 1,
   },
-  text7: {
+  label: {
     color: "#737373",
     fontSize: 15,
-    marginBottom: 6,
-    marginLeft: 33,
-  },
-  text8: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 6,
-    marginLeft: 34,
-  },
-  text9: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 6,
-    marginHorizontal: 34,
+    marginBottom: 8,
+    marginLeft: 25,
   },
   input: {
     color: "#000000",
     fontSize: 15,
-    marginBottom: 8,
+    marginBottom: 20,
     marginHorizontal: 23,
     borderColor: "#D9D9D9",
     borderRadius: 7,
     borderWidth: 1,
-    paddingVertical: 19,
+    paddingVertical: 12,
     paddingHorizontal: 13,
   },
-  input2: {
-    color: "#000000",
-    fontSize: 15,
-    marginBottom: 11,
-    marginHorizontal: 22,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 19,
-    paddingHorizontal: 10,
+  phoneContainer: {
+    flexDirection: "row",
+    marginHorizontal: 23,
+    marginBottom: 20,
   },
-  input3: {
+  countryCodeInput: {
     color: "#000000",
     fontSize: 15,
-    width: 70,
     borderColor: "#D9D9D9",
     borderRadius: 7,
     borderWidth: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 7,
-  },
-  input4: {
-    color: "#000000",
-    fontSize: 15,
-    width: 246,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-  },
-  input5: {
-    color: "#000000",
-    fontSize: 15,
-    marginBottom: 15,
-    marginHorizontal: 21,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 19,
-    paddingHorizontal: 9,
-  },
-  input6: {
-    color: "#000000",
-    fontSize: 15,
-    width: 155,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
-  },
-  input8: {
-    color: "#000000",
-    fontSize: 15,
-    marginBottom: 7,
-    marginHorizontal: 22,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 17,
+    paddingVertical: 12,
     paddingHorizontal: 13,
+    width: "25%",
+    marginRight: 10,
   },
-  input9: {
+  phoneInput: {
     color: "#000000",
     fontSize: 15,
-    marginBottom: 7,
-    marginHorizontal: 22,
     borderColor: "#D9D9D9",
     borderRadius: 7,
     borderWidth: 1,
-    paddingVertical: 17,
-    paddingHorizontal: 12,
-  },
-  input10: {
-    color: "#000000",
-    fontSize: 15,
-    marginBottom: 30,
-    marginHorizontal: 22,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 17,
-    paddingHorizontal: 14,
-  },
-  pickerContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 13,
     flex: 1,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  picker: {
-    height: 58,
   },
   button: {
     marginHorizontal: 23,
@@ -340,7 +310,11 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     paddingVertical: 15,
     alignItems: "center",
-    marginBottom: 50,
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   buttonText: {
     color: "#FFFFFF",

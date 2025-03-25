@@ -18,6 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
         "backgroundColor": "#ffffff"
       }
     },
