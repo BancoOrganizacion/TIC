@@ -1,12 +1,12 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/*const API_AUTH = 'http://192.168.0.104:3002'; //CAMBIAR POR TU IP LOCAL
-const API_USERS = 'http://192.168.0.104:3001'; // X2*/
+const API_AUTH = 'http://192.168.0.104:3002'; //CAMBIAR POR TU IP LOCAL
+const API_USERS = 'http://192.168.0.104:3001'; // X2
 
-//emulador android
+/*//emulador android
 const API_AUTH = 'http://10.0.2.2:3002'; 
-const API_USERS = 'http://10.0.2.2:3001';
+const API_USERS = 'http://10.0.2.2:3001';*/
 
 // Cliente para interceptar y manejar tokens JWT
 const authApi = axios.create({
@@ -62,5 +62,8 @@ export const userService = {
   },
   createUser: (userData) => {
     return usersApi.post('/usuarios', userData);
+  },
+  getUserProfile: () => {
+    return usersApi.get('/usuarios/perfil');
   }
 };

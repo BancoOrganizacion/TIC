@@ -1,12 +1,16 @@
-import React from "react";
-import { View, Text, Image, ImageBackground, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity } from "react-native";
 
 const AccountCard = ({ accountNumber, accountName, accountType, balance }) => {
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+
+  const toggleBalanceVisibility = () => {
+    setIsBalanceVisible(!isBalanceVisible);
+  };
+
   return (
     <ImageBackground
-      source={{
-        uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/54dc6117-abfb-460e-b129-836050f7cc5f",
-      }}
+      source={require("../assets/images/card.png")}
       resizeMode={"stretch"}
       style={styles.card}
     >
@@ -15,13 +19,6 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance }) => {
         <Text style={styles.text3}>{"N°"}</Text>
         <Text style={styles.text4}>{accountNumber}</Text>
         <View style={styles.box}></View>
-        <Image
-          source={{
-            uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/5f0cfb00-e23a-4ed1-b7bb-20246acd2470",
-          }}
-          resizeMode={"stretch"}
-          style={styles.image2}
-        />
       </View>
 
       {/* Nombre del titular */}
@@ -30,22 +27,27 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance }) => {
       {/* Tipo de cuenta */}
       <View style={styles.row3}>
         <Text style={styles.text6}>{accountType}</Text>
-        <Image
-          source={{
-            uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/d2d29080-95fe-4f1c-980e-1dc112bdbfa4",
-          }}
-          resizeMode={"stretch"}
-          style={styles.image3}
-        />
+        
+        <TouchableOpacity onPress={toggleBalanceVisibility}>
+          <Image
+            source={
+              isBalanceVisible 
+                ? require("../assets/images/eye-visible.png")
+                : require("../assets/images/eye-hidden.png")
+            }
+            resizeMode={"stretch"}
+            style={styles.image3}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Saldo */}
       <View style={styles.row4}>
-        <Text style={styles.text7}>{balance}</Text>
+        <Text style={styles.text7}>
+          {isBalanceVisible ? balance : '•••••••'}
+        </Text>
         <Image
-          source={{
-            uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/7d485700-f659-44cf-beda-fbe52f82305f",
-          }}
+          source={require("../assets/images/chevron-right.png")}
           resizeMode={"stretch"}
           style={styles.image4}
         />
@@ -56,10 +58,10 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance }) => {
 
 const styles = StyleSheet.create({
   card: {
-    height: 179,
+    height: 200,
     padding: 18,
     marginBottom: 20,
-    marginHorizontal: 45,
+    marginHorizontal: 26,
   },
   row2: {
     flexDirection: "row",
@@ -71,16 +73,16 @@ const styles = StyleSheet.create({
   },
   text3: {
     color: "#23303B",
-    fontSize: 9,
-    marginRight: 17,
+    fontSize: 15,
+    marginRight: 8,
   },
   text4: {
     color: "#23303B",
-    fontSize: 10,
+    fontSize: 15,
   },
   text5: {
     color: "#23303B",
-    fontSize: 9,
+    fontSize: 13,
     marginBottom: 63,
   },
   row3: {
@@ -90,7 +92,7 @@ const styles = StyleSheet.create({
   },
   text6: {
     color: "#23303B",
-    fontSize: 9,
+    fontSize: 13,
     marginRight: 10,
   },
   image3: {
@@ -103,13 +105,13 @@ const styles = StyleSheet.create({
   },
   text7: {
     color: "#23303B",
-    fontSize: 28,
+    fontSize: 25,
     marginRight: 4,
     flex: 1,
   },
   image4: {
-    width: 6,
-    height: 11,
+    width: 15,
+    height: 23,
   },
   image2: {
     width: 18,

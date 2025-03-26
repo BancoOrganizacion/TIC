@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from 'axios';
+import axios from "axios";
 import {
   SafeAreaView,
   View,
@@ -10,10 +10,10 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import BackButton from "../components/BackButton";
 import { userService } from "../services/api";
-const API_USERS = 'http://10.0.2.2:3001';
 
 export default (props) => {
   const [nombre, setNombre] = useState("");
@@ -28,14 +28,27 @@ export default (props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const ROL_USUARIO_ID = "67d8565e668d308ad20654cc";
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
 
   const handleGoBack = () => {
     props.navigation.goBack();
   };
 
   const validateForm = () => {
-    if (!nombre || !apellido || !cedula || !email || !nombreUsuario || !password) {
-      Alert.alert("Error", "Por favor complete todos los campos obligatorios (*)");
+    if (
+      !nombre ||
+      !apellido ||
+      !cedula ||
+      !email ||
+      !nombreUsuario ||
+      !password
+    ) {
+      Alert.alert(
+        "Error",
+        "Por favor complete todos los campos obligatorios (*)"
+      );
       return false;
     }
 
@@ -58,60 +71,49 @@ export default (props) => {
     return true;
   };
 
-
   const handleNext = async () => {
     if (!validateForm()) return;
-  
+
     setIsLoading(true);
     try {
-      // Add the connection test here
-      try {
-        const testResponse = await axios.get(`${API_USERS}/roles`);
-        console.log("Conexión exitosa - Roles:", testResponse.data);
-      } catch (testError) {
-        console.error("Error de prueba de conexión:", testError);
-        Alert.alert("Error de conexión", 
-          "No se pudo conectar con el servidor. Verifica que el servidor esté en ejecución y sea accesible.");
-        setIsLoading(false);
-        return;
-      }
-      console.log("Intentando registrar usuario...");
-      
       // Preparar los datos según la estructura esperada por tu backend
       const userData = {
         nombre: nombre,
         apellido: apellido,
         cedula: cedula,
         email: email,
-        telefono: telefono ? (telefono.startsWith('0') ? telefono : `0${telefono}`) : undefined,
+        telefono: telefono
+          ? telefono.startsWith("0")
+            ? telefono
+            : `0${telefono}`
+          : undefined,
         rol: ROL_USUARIO_ID,
         nombre_usuario: nombreUsuario,
-        contraseña: password 
+        contraseña: password,
       };
-  
-      console.log("Datos de usuario:", JSON.stringify(userData, null, 2));
-  
+
       const response = await userService.createUser(userData);
-      console.log("Respuesta del servidor:", response.data);
-      
+
       Alert.alert(
-        "Registro exitoso", 
+        "Registro exitoso",
         "Tu cuenta ha sido creada correctamente.",
-        [{ 
-          text: "Iniciar sesión", 
-          onPress: () => props.navigation.navigate("Login") 
-        }]
+        [
+          {
+            text: "Iniciar sesión",
+            onPress: () => props.navigation.navigate("Login"),
+          },
+        ]
       );
     } catch (error) {
-      console.error('Error al registrar usuario:', error);
-      
+      console.error("Error al registrar usuario:", error);
+
       let errorMsg = "Error al crear la cuenta";
-      
+
       if (error.response) {
         // El servidor respondió con un código de estado fuera del rango 2xx
-        console.log('Datos de error:', error.response.data);
-        console.log('Estado:', error.response.status);
-        
+        console.log("Datos de error:", error.response.data);
+        console.log("Estado:", error.response.status);
+
         if (error.response.status === 409) {
           errorMsg = "Este usuario o cédula ya está registrado";
         } else if (error.response.data && error.response.data.message) {
@@ -119,14 +121,16 @@ export default (props) => {
         }
       } else if (error.request) {
         // La solicitud se realizó pero no se recibió respuesta
-        console.log('Solicitud sin respuesta:', error.request);
-        errorMsg = "No se pudo conectar con el servidor. Verifica tu conexión a internet y que el servidor esté en ejecución.";
+        console.log("Solicitud sin respuesta:", error.request);
+        errorMsg =
+          "No se pudo conectar con el servidor. Verifica tu conexión a internet y que el servidor esté en ejecución.";
       } else {
         // Ocurrió un error durante la configuración de la solicitud
-        console.log('Error de configuración:', error.message);
-        errorMsg = "Error en la configuración de la solicitud: " + error.message;
+        console.log("Error de configuración:", error.message);
+        errorMsg =
+          "Error en la configuración de la solicitud: " + error.message;
       }
-      
+
       Alert.alert("Error", errorMsg);
     } finally {
       setIsLoading(false);
@@ -137,7 +141,7 @@ export default (props) => {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.headerContainer}>
-          <BackButton onPress={handleGoBack} /> 
+          <BackButton onPress={handleGoBack} />
           <Text style={styles.title}>Registro</Text>
         </View>
 
@@ -203,26 +207,60 @@ export default (props) => {
           style={styles.input}
         />
 
+        {/* Password input */}
         <Text style={styles.label}>Contraseña*</Text>
-        <TextInput
-          placeholder="Ingresa una contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder="Ingresa una contraseña"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!isPasswordVisible}
+            style={styles.passwordInput}
+          />
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+            style={styles.eyeIconContainer}
+          >
+            <Image
+              source={
+                isPasswordVisible
+                  ? require("../assets/images/eye-visible.png")
+                  : require("../assets/images/eye-hidden.png")
+              }
+              style={styles.eyeIcon}
+            />
+          </TouchableOpacity>
+        </View>
 
+        {/* Confirm Password input */}
         <Text style={styles.label}>Confirma tu contraseña*</Text>
-        <TextInput
-          placeholder="Ingresa la contraseña otra vez"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          style={styles.input}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder="Ingresa la contraseña otra vez"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!isConfirmPasswordVisible}
+            style={styles.passwordInput}
+          />
+          <TouchableOpacity
+            onPress={() =>
+              setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
+            }
+            style={styles.eyeIconContainer}
+          >
+            <Image
+              source={
+                isConfirmPasswordVisible
+                  ? require("../assets/images/eye-visible.png")
+                  : require("../assets/images/eye-hidden.png")
+              }
+              style={styles.eyeIcon}
+            />
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity 
-          onPress={handleNext} 
+        <TouchableOpacity
+          onPress={handleNext}
           style={[styles.button, isLoading && styles.disabledButton]}
           disabled={isLoading}
         >
@@ -321,4 +359,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 23,
+    marginBottom: 20,
+    borderColor: "#D9D9D9",
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  passwordInput: {
+    color: "#000000",
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
+    flex: 1,
+  },
+  eyeIconContainer: {
+    padding: 10,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#737373',
+  },
+
 });
