@@ -8,11 +8,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Button from "../components/Button";
 import { authService } from "../services/api";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CustomCheckbox = ({ isSelected, onToggle }) => {
   return (
@@ -25,13 +26,16 @@ const CustomCheckbox = ({ isSelected, onToggle }) => {
 export default (props) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isSelected, setSelection] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigation = useNavigation();
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert("Error", "Por favor ingrese su nombre de usuario y contraseña");
+      Alert.alert(
+        "Error",
+        "Por favor ingrese su nombre de usuario y contraseña"
+      );
       return;
     }
 
@@ -39,22 +43,16 @@ export default (props) => {
     try {
       const response = await authService.login(username, password);
       const token = response.data.access_token;
-      
+
       // Guardar el token en AsyncStorage
-      await AsyncStorage.setItem('token', token);
-      
-      // Si la opción "Recordarme" está seleccionada, guardar también el nombre de usuario
-      if (isSelected) {
-        await AsyncStorage.setItem('savedUsername', username);
-      } else {
-        await AsyncStorage.removeItem('savedUsername');
-      }
-      
+      await AsyncStorage.setItem("token", token);
+
+
       navigation.navigate("Home");
     } catch (error) {
-      console.error('Error de login:', error);
+      console.error("Error de login:", error);
       Alert.alert(
-        "Error de inicio de sesión", 
+        "Error de inicio de sesión",
         "Credenciales inválidas. Por favor intente nuevamente."
       );
     } finally {
@@ -69,13 +67,13 @@ export default (props) => {
   // Verificar si hay un nombre de usuario guardado al cargar la pantalla
   React.useEffect(() => {
     const checkSavedUsername = async () => {
-      const savedUsername = await AsyncStorage.getItem('savedUsername');
+      const savedUsername = await AsyncStorage.getItem("savedUsername");
       if (savedUsername) {
         setUsername(savedUsername);
         setSelection(true);
       }
     };
-    
+
     checkSavedUsername();
   }, []);
 
@@ -97,22 +95,27 @@ export default (props) => {
         />
 
         <Text style={styles.label}>{"Contraseña"}</Text>
-        <TextInput
-          placeholder={"Ingresa tu contraseña"}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-        />
-
-        <View style={styles.optionsRow}>
-          <CustomCheckbox
-            isSelected={isSelected}
-            onToggle={() => setSelection(!isSelected)}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder={"Ingresa tu contraseña"}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!isPasswordVisible}
+            style={styles.passwordInput}
           />
-          <Text style={styles.rememberMe}>{"Recordarme"}</Text>
-          <View style={{ flex: 1 }}></View>
-          <Text style={styles.forgotPassword}>{"Olvidaste tu contraseña"}</Text>
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+            style={styles.eyeIconContainer}
+          >
+            <Image
+              source={
+                isPasswordVisible
+                  ? require("../assets/images/eye-visible.png")
+                  : require("../assets/images/eye-hidden.png")
+              }
+              style={styles.eyeIcon}
+            />
+          </TouchableOpacity>
         </View>
 
         <Button
@@ -176,6 +179,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 19,
     paddingHorizontal: 20,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 23,
+    marginBottom: 20,
+    borderColor: "#D9D9D9",
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  passwordInput: {
+    color: "#000000",
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
+    flex: 1,
+  },
+  eyeIconContainer: {
+    padding: 10,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#737373',
   },
   optionsRow: {
     flexDirection: "row",

@@ -8,14 +8,19 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
 import Greeting from "../components/Greeting";
 import AccountCard from "../components/AccountCard"; 
+import { userService } from "../services/api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AccountDashboard = () => {
   const navigation = useNavigation();
+  const [userProfile, setUserProfile] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleRestrictionsPress = () => {
     navigation.navigate("RestrictionsList");

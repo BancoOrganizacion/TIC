@@ -36,6 +36,55 @@ export default (props) => {
     props.navigation.goBack();
   };
 
+  // Validation functions
+  const validateNombre = (text) => {
+    // Only letters and spaces
+    const lettersOnlyRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+    if (lettersOnlyRegex.test(text)) {
+      setNombre(text);
+    }
+  };
+
+  const validateApellido = (text) => {
+    // Only letters and spaces
+    const lettersOnlyRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+    if (lettersOnlyRegex.test(text)) {
+      setApellido(text);
+    }
+  };
+
+  const validateCedula = (text) => {
+    // Only numbers, max 10 digits
+    const numbersOnlyRegex = /^[0-9]{0,10}$/;
+    if (numbersOnlyRegex.test(text)) {
+      setCedula(text);
+    }
+  };
+
+  const validateTelefono = (text) => {
+    // Only numbers
+    const numbersOnlyRegex = /^[0-9]*$/;
+    if (numbersOnlyRegex.test(text)) {
+      setTelefono(text);
+    }
+  };
+
+  const validateNombreUsuario = (text) => {
+    // Alphanumeric and underscore
+    const usernameRegex = /^[a-zA-Z0-9_]*$/;
+    if (usernameRegex.test(text)) {
+      setNombreUsuario(text);
+    }
+  };
+
+  const validateEmail = (text) => {
+    // Allow basic email characters
+    const emailRegex = /^[a-zA-Z0-9@._-]*$/;
+    if (emailRegex.test(text)) {
+      setEmail(text);
+    }
+  };
+
   const validateForm = () => {
     if (
       !nombre ||
@@ -57,14 +106,10 @@ export default (props) => {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Correo electrónico inválido");
-      return false;
-    }
-
-    if (!/^\d{10}$/.test(cedula)) {
-      Alert.alert("Error", "La cédula debe tener 10 dígitos numéricos");
+    // Additional email validation
+    const emailValidationRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailValidationRegex.test(email)) {
+      Alert.alert("Error", "Por favor ingrese un correo electrónico válido");
       return false;
     }
 
@@ -76,7 +121,6 @@ export default (props) => {
 
     setIsLoading(true);
     try {
-      // Preparar los datos según la estructura esperada por tu backend
       const userData = {
         nombre: nombre,
         apellido: apellido,
@@ -91,47 +135,54 @@ export default (props) => {
         nombre_usuario: nombreUsuario,
         contraseña: password,
       };
+      console.log("Enviando datos de registro:", userData);
 
       const response = await userService.createUser(userData);
-
-      Alert.alert(
-        "Registro exitoso",
-        "Tu cuenta ha sido creada correctamente.",
-        [
-          {
-            text: "Iniciar sesión",
-            onPress: () => props.navigation.navigate("Login"),
-          },
-        ]
-      );
+      console.log("Respuesta de registro:", response.data);
+      
+      // Después del registro exitoso, iniciar sesión automáticamente
+      try {
+        const loginResponse = await authService.login(nombreUsuario, password);
+        // Guardar el token en AsyncStorage
+        if (loginResponse.data && loginResponse.data.access_token) {
+          await AsyncStorage.setItem("token", loginResponse.data.access_token);
+          props.navigation.replace("MainTabs"); // Redireccionar a la pantalla principal
+        }
+      } catch (loginError) {
+        console.error("Error al iniciar sesión automáticamente:", loginError);
+        Alert.alert(
+          "Registro exitoso",
+          "Tu cuenta ha sido creada. Por favor inicia sesión.",
+          [{ text: "OK", onPress: () => props.navigation.navigate("Login") }]
+        );
+      }
     } catch (error) {
-      console.error("Error al registrar usuario:", error);
+      let errorMsg = "Error desconocido al registrar";
 
-      let errorMsg = "Error al crear la cuenta";
-
-      if (error.response) {
-        // El servidor respondió con un código de estado fuera del rango 2xx
-        console.log("Datos de error:", error.response.data);
-        console.log("Estado:", error.response.status);
-
-        if (error.response.status === 409) {
-          errorMsg = "Este usuario o cédula ya está registrado";
-        } else if (error.response.data && error.response.data.message) {
+      if (error.response && error.response.data) {
+        // Handle validation errors from backend
+        if (
+          error.response.data.message &&
+          Array.isArray(error.response.data.message)
+        ) {
+          // Join multiple validation error messages
+          errorMsg = error.response.data.message.join("\n");
+        } else if (error.response.data.message) {
           errorMsg = error.response.data.message;
         }
+
+        // Additional specific error handling
+        if (error.response.status === 409) {
+          errorMsg = "Este usuario o cédula ya está registrado";
+        }
       } else if (error.request) {
-        // La solicitud se realizó pero no se recibió respuesta
-        console.log("Solicitud sin respuesta:", error.request);
         errorMsg =
-          "No se pudo conectar con el servidor. Verifica tu conexión a internet y que el servidor esté en ejecución.";
+          "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
       } else {
-        // Ocurrió un error durante la configuración de la solicitud
-        console.log("Error de configuración:", error.message);
-        errorMsg =
-          "Error en la configuración de la solicitud: " + error.message;
+        errorMsg = "Error en la solicitud: " + error.message;
       }
 
-      Alert.alert("Error", errorMsg);
+      Alert.alert("Error de Registro", errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +200,7 @@ export default (props) => {
         <TextInput
           placeholder="Ingresa tu nombre"
           value={nombre}
-          onChangeText={setNombre}
+          onChangeText={validateNombre}
           style={styles.input}
         />
 
@@ -157,7 +208,7 @@ export default (props) => {
         <TextInput
           placeholder="Ingresa tu apellido"
           value={apellido}
-          onChangeText={setApellido}
+          onChangeText={validateApellido}
           style={styles.input}
         />
 
@@ -165,7 +216,7 @@ export default (props) => {
         <TextInput
           placeholder="Ingresa tu cédula"
           value={cedula}
-          onChangeText={setCedula}
+          onChangeText={validateCedula}
           keyboardType="numeric"
           maxLength={10}
           style={styles.input}
@@ -182,7 +233,7 @@ export default (props) => {
           <TextInput
             placeholder="0999999999"
             value={telefono}
-            onChangeText={setTelefono}
+            onChangeText={validateTelefono}
             keyboardType="numeric"
             style={styles.phoneInput}
           />
@@ -192,7 +243,7 @@ export default (props) => {
         <TextInput
           placeholder="name@example.com"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={validateEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           style={styles.input}
@@ -202,12 +253,12 @@ export default (props) => {
         <TextInput
           placeholder="Ingresa un nombre de usuario"
           value={nombreUsuario}
-          onChangeText={setNombreUsuario}
+          onChangeText={validateNombreUsuario}
           autoCapitalize="none"
           style={styles.input}
         />
 
-        {/* Password input */}
+        {/* Password input remains the same */}
         <Text style={styles.label}>Contraseña*</Text>
         <View style={styles.passwordContainer}>
           <TextInput
@@ -232,7 +283,7 @@ export default (props) => {
           </TouchableOpacity>
         </View>
 
-        {/* Confirm Password input */}
+        {/* Confirm Password input remains the same */}
         <Text style={styles.label}>Confirma tu contraseña*</Text>
         <View style={styles.passwordContainer}>
           <TextInput
@@ -360,8 +411,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 23,
     marginBottom: 20,
     borderColor: "#D9D9D9",
@@ -381,7 +432,6 @@ const styles = StyleSheet.create({
   eyeIcon: {
     width: 24,
     height: 24,
-    tintColor: '#737373',
+    tintColor: "#737373",
   },
-
 });

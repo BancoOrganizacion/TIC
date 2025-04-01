@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   SafeAreaView, 
   View, 
@@ -6,14 +6,50 @@ import {
   Text, 
   StyleSheet,
   TouchableOpacity,
-  Image 
+  Image,
+  Alert 
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
 import BackButton from "../components/BackButton";
+import { userService } from "../services/api";
 
 const UserProfile = () => {
   const navigation = useNavigation();
+  const [userProfile, setUserProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await userService.getUserProfile();
+      setUserProfile(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      Alert.alert("Error", "No se pudo cargar el perfil del usuario");
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.loadingText}>Cargando perfil...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.errorText}>No se pudo cargar el perfil</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,7 +60,7 @@ const UserProfile = () => {
           <Text style={styles.headerTitle}>Perfil</Text>
           <TouchableOpacity 
             style={styles.editButton}
-            onPress={() => navigation.navigate("EditProfile")}
+            onPress={() => navigation.navigate("EditProfile", { userProfile })}
           >
             <Image
               source={{uri: "https://cdn-icons-png.flaticon.com/512/1160/1160758.png"}}
@@ -47,23 +83,28 @@ const UserProfile = () => {
         {/* Profile Info Fields */}
         <View style={styles.formContainer}>
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Nombre</Text>
-            <Text style={styles.fieldValue}>Ana Campoverde</Text>
+            <Text style={styles.fieldLabel}>Nombre Completo</Text>
+            <Text style={styles.fieldValue}>{`${userProfile.nombre} ${userProfile.apellido}`}</Text>
           </View>
           
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Correo</Text>
-            <Text style={styles.fieldValue}>ana@gmail.com</Text>
+            <Text style={styles.fieldValue}>{userProfile.email}</Text>
           </View>
           
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Cédula</Text>
-            <Text style={styles.fieldValue}>17235689875</Text>
+            <Text style={styles.fieldValue}>{userProfile.cedula}</Text>
           </View>
           
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Phone Number</Text>
-            <Text style={styles.fieldValue}>+593 9999999999</Text>
+            <Text style={styles.fieldLabel}>Número de Teléfono</Text>
+            <Text style={styles.fieldValue}>
+              {userProfile.telefono ? 
+                (userProfile.telefono.startsWith('0') ? userProfile.telefono : `0${userProfile.telefono}`) : 
+                'No registrado'
+              }
+            </Text>
           </View>
         </View>
         
@@ -133,6 +174,19 @@ const styles = StyleSheet.create({
   bottomNavSpacer: {
     height: 80,
   },
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 50,
+    fontSize: 18,
+    color: '#333',
+  },
+  errorText: {
+    textAlign: 'center',
+    marginTop: 50,
+    fontSize: 18,
+    color: 'red',
+  },
+
 });
 
 export default UserProfile;
