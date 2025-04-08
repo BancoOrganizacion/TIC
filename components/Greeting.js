@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Image, Text, StyleSheet } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { userService } from "../services/api"; // Adjust the import path as needed
+
 
 const Greeting = ({ style }) => {
   const [name, setName] = useState("");
-
+  
   const getCurrentDate = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -13,44 +13,60 @@ const Greeting = ({ style }) => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}.${month}.${day}`;
   };
-
+  
   useEffect(() => {
-    const fetchUserName = async () => {
+    const loadUserName = async () => {
       try {
-        // First, try to get the username from AsyncStorage
-        const storedUsername = await AsyncStorage.getItem('savedUsername');
+        // First attempt: Try to get the real name directly from AsyncStorage
+        const nombreReal = await AsyncStorage.getItem('nombreReal');
+        if (nombreReal) {
+          setName(nombreReal);
+          return;
+        }
         
-        if (storedUsername) {
-          setName(storedUsername);
+        // Second attempt: Try to get user profile from AsyncStorage
+        const storedProfile = await AsyncStorage.getItem('userProfile');
+        if (storedProfile) {
+          try {
+            const profileData = JSON.parse(storedProfile);
+            if (profileData && profileData.nombre) {
+              // Use the real name from user profile
+              setName(profileData.nombre);
+              // Save for future quick access
+              await AsyncStorage.setItem('nombreReal', profileData.nombre);
+              return;
+            }
+          } catch (err) {
+            console.error('Error parsing stored profile:', err);
+          }
         }
-
-        // Then try to fetch user details from the API
-        const response = await userService.getUserProfile();
-        if (response.data && response.data.nombre) {
-          setName(response.data.nombre);
-        }
+        
+        // Use a default name if no data is found
+        setName("User");
       } catch (error) {
-        console.error('Error fetching user name:', error);
-        // If fetching fails, fall back to stored username
+        console.error('Error loading user name:', error);
+        setName("User");
       }
     };
-
-    fetchUserName();
+    
+    loadUserName();
   }, []);
-
+  
   return (
     <View style={[styles.container, style]}>
       <Image
-        source={require('../assets/images/user.png')} // Local image path
+        source={require('../assets/images/user.png')}
         style={styles.image}
       />
       <View style={styles.textContainer}>
         <Text style={styles.dateText}>{getCurrentDate()}</Text>
-        <Text style={styles.greetingText}>Hi, {name || 'User'}!</Text>
+        <Text style={styles.greetingText}>Hi, {name}!</Text>
       </View>
     </View>
   );
 };
+
+export default Greeting; 
 
 const styles = StyleSheet.create({
   container: {
@@ -80,5 +96,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-export default Greeting;

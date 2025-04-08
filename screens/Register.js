@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import {
   SafeAreaView,
   View,
@@ -12,92 +11,88 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import BackButton from "../components/BackButton";
-import { userService } from "../services/api";
+import { userService, authService } from "../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default (props) => {
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [cedula, setCedula] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [codigoPais, setCodigoPais] = useState("+593");
-  const [email, setEmail] = useState("");
-  const [nombreUsuario, setNombreUsuario] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+export default () => {
+  const [formData, setFormData] = useState({
+    nombre: "",
+    apellido: "",
+    cedula: "",
+    telefono: "",
+    email: "",
+    nombreUsuario: "",
+    password: "",
+    confirmPassword: ""
+  });
   const [isLoading, setIsLoading] = useState(false);
-
-  const ROL_USUARIO_ID = "67d8565e668d308ad20654cc";
+  const [errors, setErrors] = useState({});
+  const navigation = useNavigation();
+  const ROL_USUARIO_ID = "67ec71573b2822762122e79a";
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
-    useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const handleGoBack = () => {
-    props.navigation.goBack();
+    navigation.goBack();
+  };
+
+  const handleChange = (field, value) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
   };
 
   // Validation functions
   const validateNombre = (text) => {
-    // Only letters and spaces
     const lettersOnlyRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
     if (lettersOnlyRegex.test(text)) {
-      setNombre(text);
+      handleChange('nombre', text);
     }
   };
 
   const validateApellido = (text) => {
-    // Only letters and spaces
     const lettersOnlyRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
     if (lettersOnlyRegex.test(text)) {
-      setApellido(text);
+      handleChange('apellido', text);
     }
   };
 
   const validateCedula = (text) => {
-    // Only numbers, max 10 digits
     const numbersOnlyRegex = /^[0-9]{0,10}$/;
     if (numbersOnlyRegex.test(text)) {
-      setCedula(text);
+      handleChange('cedula', text);
     }
   };
 
   const validateTelefono = (text) => {
-    // Only numbers
     const numbersOnlyRegex = /^[0-9]*$/;
     if (numbersOnlyRegex.test(text)) {
-      setTelefono(text);
+      handleChange('telefono', text);
     }
   };
 
   const validateNombreUsuario = (text) => {
-    // Alphanumeric and underscore
     const usernameRegex = /^[a-zA-Z0-9_]*$/;
     if (usernameRegex.test(text)) {
-      setNombreUsuario(text);
+      handleChange('nombreUsuario', text);
     }
   };
 
   const validateEmail = (text) => {
-    // Allow basic email characters
     const emailRegex = /^[a-zA-Z0-9@._-]*$/;
     if (emailRegex.test(text)) {
-      setEmail(text);
+      handleChange('email', text);
     }
   };
 
   const validateForm = () => {
-    if (
-      !nombre ||
-      !apellido ||
-      !cedula ||
-      !email ||
-      !nombreUsuario ||
-      !password
-    ) {
-      Alert.alert(
-        "Error",
-        "Por favor complete todos los campos obligatorios (*)"
-      );
+    const { nombre, apellido, cedula, email, nombreUsuario, password, confirmPassword } = formData;
+    
+    if (!nombre || !apellido || !cedula || !email || !nombreUsuario || !password) {
+      Alert.alert("Error", "Por favor complete todos los campos obligatorios (*)");
       return false;
     }
 
@@ -106,7 +101,6 @@ export default (props) => {
       return false;
     }
 
-    // Additional email validation
     const emailValidationRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailValidationRegex.test(email)) {
       Alert.alert("Error", "Por favor ingrese un correo electrónico válido");
@@ -121,67 +115,57 @@ export default (props) => {
 
     setIsLoading(true);
     try {
+      const { nombre, apellido, cedula, email, telefono, nombreUsuario, password } = formData;
+      
       const userData = {
-        nombre: nombre,
-        apellido: apellido,
-        cedula: cedula,
-        email: email,
-        telefono: telefono
-          ? telefono.startsWith("0")
-            ? telefono
-            : `0${telefono}`
-          : undefined,
+        nombre,
+        apellido,
+        cedula,
+        email,
+        telefono,
         rol: ROL_USUARIO_ID,
         nombre_usuario: nombreUsuario,
         contraseña: password,
       };
       console.log("Enviando datos de registro:", userData);
 
-      const response = await userService.createUser(userData);
-      console.log("Respuesta de registro:", response.data);
+      const registerResponse = await userService.createUser(userData);
+      const userId = registerResponse.data._id;
+  
+      // Generar código de verificación
+      const codeResponse = await authService.generateVerificationCode(userId);
+      const verificationCode = codeResponse.data.code;
+  
+      // Obtener enlace de Telegram
+      const telegramResponse = await authService.getTelegramLink(userId);
+      const telegramLink = telegramResponse.data.deepLink;
+  
+      // Navegar a pantalla de verificación
+      navigation.navigate('Verification', { 
+        userId,
+        initialCode: verificationCode,
+        telegramLink 
+      });
       
-      // Después del registro exitoso, iniciar sesión automáticamente
-      try {
-        const loginResponse = await authService.login(nombreUsuario, password);
-        // Guardar el token en AsyncStorage
-        if (loginResponse.data && loginResponse.data.access_token) {
-          await AsyncStorage.setItem("token", loginResponse.data.access_token);
-          props.navigation.replace("MainTabs"); // Redireccionar a la pantalla principal
-        }
-      } catch (loginError) {
-        console.error("Error al iniciar sesión automáticamente:", loginError);
-        Alert.alert(
-          "Registro exitoso",
-          "Tu cuenta ha sido creada. Por favor inicia sesión.",
-          [{ text: "OK", onPress: () => props.navigation.navigate("Login") }]
-        );
-      }
     } catch (error) {
       let errorMsg = "Error desconocido al registrar";
-
+  
       if (error.response && error.response.data) {
-        // Handle validation errors from backend
-        if (
-          error.response.data.message &&
-          Array.isArray(error.response.data.message)
-        ) {
-          // Join multiple validation error messages
+        if (error.response.data.message && Array.isArray(error.response.data.message)) {
           errorMsg = error.response.data.message.join("\n");
         } else if (error.response.data.message) {
           errorMsg = error.response.data.message;
         }
-
-        // Additional specific error handling
+  
         if (error.response.status === 409) {
           errorMsg = "Este usuario o cédula ya está registrado";
         }
       } else if (error.request) {
-        errorMsg =
-          "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
+        errorMsg = "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
       } else {
         errorMsg = "Error en la solicitud: " + error.message;
       }
-
+  
       Alert.alert("Error de Registro", errorMsg);
     } finally {
       setIsLoading(false);
@@ -199,7 +183,7 @@ export default (props) => {
         <Text style={styles.label}>Nombre*</Text>
         <TextInput
           placeholder="Ingresa tu nombre"
-          value={nombre}
+          value={formData.nombre}
           onChangeText={validateNombre}
           style={styles.input}
         />
@@ -207,7 +191,7 @@ export default (props) => {
         <Text style={styles.label}>Apellido*</Text>
         <TextInput
           placeholder="Ingresa tu apellido"
-          value={apellido}
+          value={formData.apellido}
           onChangeText={validateApellido}
           style={styles.input}
         />
@@ -215,7 +199,7 @@ export default (props) => {
         <Text style={styles.label}>Cédula*</Text>
         <TextInput
           placeholder="Ingresa tu cédula"
-          value={cedula}
+          value={formData.cedula}
           onChangeText={validateCedula}
           keyboardType="numeric"
           maxLength={10}
@@ -223,26 +207,18 @@ export default (props) => {
         />
 
         <Text style={styles.label}>Número de teléfono</Text>
-        <View style={styles.phoneContainer}>
-          <TextInput
-            placeholder="+593"
-            value={codigoPais}
-            onChangeText={setCodigoPais}
-            style={styles.countryCodeInput}
-          />
-          <TextInput
-            placeholder="0999999999"
-            value={telefono}
-            onChangeText={validateTelefono}
-            keyboardType="numeric"
-            style={styles.phoneInput}
-          />
-        </View>
+        <TextInput
+          placeholder="0999999999"
+          value={formData.telefono}
+          onChangeText={validateTelefono}
+          keyboardType="numeric"
+          style={styles.input}
+        />
 
         <Text style={styles.label}>Correo*</Text>
         <TextInput
           placeholder="name@example.com"
-          value={email}
+          value={formData.email}
           onChangeText={validateEmail}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -252,19 +228,18 @@ export default (props) => {
         <Text style={styles.label}>Nombre de usuario*</Text>
         <TextInput
           placeholder="Ingresa un nombre de usuario"
-          value={nombreUsuario}
+          value={formData.nombreUsuario}
           onChangeText={validateNombreUsuario}
           autoCapitalize="none"
           style={styles.input}
         />
 
-        {/* Password input remains the same */}
         <Text style={styles.label}>Contraseña*</Text>
         <View style={styles.passwordContainer}>
           <TextInput
             placeholder="Ingresa una contraseña"
-            value={password}
-            onChangeText={setPassword}
+            value={formData.password}
+            onChangeText={(text) => handleChange('password', text)}
             secureTextEntry={!isPasswordVisible}
             style={styles.passwordInput}
           />
@@ -283,20 +258,17 @@ export default (props) => {
           </TouchableOpacity>
         </View>
 
-        {/* Confirm Password input remains the same */}
         <Text style={styles.label}>Confirma tu contraseña*</Text>
         <View style={styles.passwordContainer}>
           <TextInput
             placeholder="Ingresa la contraseña otra vez"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            value={formData.confirmPassword}
+            onChangeText={(text) => handleChange('confirmPassword', text)}
             secureTextEntry={!isConfirmPasswordVisible}
             style={styles.passwordInput}
           />
           <TouchableOpacity
-            onPress={() =>
-              setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
-            }
+            onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
             style={styles.eyeIconContainer}
           >
             <Image

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -15,13 +15,6 @@ import Button from "../components/Button";
 import { authService } from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const CustomCheckbox = ({ isSelected, onToggle }) => {
-  return (
-    <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
-      <Text style={styles.checkbox}>{isSelected ? "✓" : ""}</Text>
-    </TouchableOpacity>
-  );
-};
 
 export default (props) => {
   const [username, setUsername] = useState("");
@@ -32,47 +25,62 @@ export default (props) => {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert(
-        "Error",
-        "Por favor ingrese su nombre de usuario y contraseña"
-      );
+      Alert.alert("Error", "Por favor ingrese su nombre de usuario y contraseña");
       return;
     }
-
+  
     setIsLoading(true);
     try {
       const response = await authService.login(username, password);
-      const token = response.data.access_token;
-
+      
       // Guardar el token en AsyncStorage
-      await AsyncStorage.setItem("token", token);
-
-
-      navigation.navigate("Home");
+      if (response.data && response.data.access_token) {
+        await AsyncStorage.setItem("token", response.data.access_token);
+        await AsyncStorage.setItem("nombre_usuario", username);
+        console.log("Login response data:", response.data);3
+        
+        // Save user profile if available in response
+        if (response.data.usuario) {
+          console.log("Saving user profile:", response.data.usuario);
+          await AsyncStorage.setItem("userProfile", JSON.stringify(response.data.usuario));
+          
+          // Save the real name specifically
+          if (response.data.usuario.nombre) {
+            console.log("Saving real name:", response.data.usuario.nombre);
+            await AsyncStorage.setItem("nombreReal", response.data.usuario.nombre);
+          }
+        }
+        
+        navigation.navigate("Home");
+      } else {
+        throw new Error("Token no recibido del servidor");
+      }
     } catch (error) {
       console.error("Error de login:", error);
       Alert.alert(
         "Error de inicio de sesión",
-        "Credenciales inválidas. Por favor intente nuevamente."
+        "Usuario o contraseña incorrectos"
       );
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleRegister = () => {
     navigation.navigate("Register");
   };
 
-  // Verificar si hay un nombre de usuario guardado al cargar la pantalla
-  React.useEffect(() => {
-    const checkSavedUsername = async () => {
+// Verificar si hay un nombre de usuario guardado al cargar la pantalla
+useEffect(() => {
+  const checkSavedUsername = async () => {
+    try {
       const savedUsername = await AsyncStorage.getItem("savedUsername");
       if (savedUsername) {
         setUsername(savedUsername);
-        setSelection(true);
       }
-    };
+    } catch (error) {
+      console.error("Error al recuperar usuario guardado:", error);
+    }
+  };
 
     checkSavedUsername();
   }, []);

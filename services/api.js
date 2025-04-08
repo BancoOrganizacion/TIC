@@ -1,93 +1,132 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/*const API_AUTH = 'http://192.168.0.102:3002'; //CAMBIAR POR TU IP LOCAL
-const API_USERS = 'http://192.168.0.102:3001'; // X2*/
-const API_GATEWAY = 'http://192.168.0.102:3000';
+//const API_GATEWAY = 'http://192.168.0.104:3000';
+const API_GATEWAY = "http://192.168.100.101:3000";
 //emulador android
-/*const API_AUTH = 'http://10.0.2.2:3002'; 
-const API_USERS = 'http://10.0.2.2:3001';*/
 //const API_GATEWAY = 'http://10.0.2.2:3000';
 
-// Cliente para manejar todas las peticiones
-const api = axios.create({
-  baseURL: API_GATEWAY
+// Cliente para peticiones que NO requieren autenticación
+const apiPublic = axios.create({
+  baseURL: API_GATEWAY,
 });
 
+// Cliente para peticiones que requieren autenticación
+const apiPrivate = axios.create({
+  baseURL: API_GATEWAY,
+});
 
-// Interceptor para agregar el token a todas las peticiones
-api.interceptors.request.use(
-  async config => {
+// Interceptor para agregar el token solo a las peticiones autenticadas
+apiPrivate.interceptors.request.use(
+  async (config) => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Error al obtener token:', error);
+      console.error("Error al obtener token:", error);
     }
     return config;
   },
-  error => Promise.reject(error)
+  (error) => Promise.reject(error)
 );
 
-// Servicios de autenticación
+// Servicios de autenticación (no requieren token)
 export const authService = {
   login: (username, password) => {
-    return api.post('/auth/auth/login', { username, password });
-  }
+    return apiPublic.post("/auth/auth/login", { username, password });
+  },
+  generateVerificationCode: (userId) => {
+    return apiPrivate.post('/auth/codigo/generar', { userId });
+  },
+
+  validateVerificationCode: (userId, code) => {
+    return apiPrivate.post('/auth/codigo/validar', { userId, code });
+  },
+
+  getTelegramLink: (userId) => {
+    return apiPrivate.get('/auth/telegram/link', { 
+      params: { userId } 
+    });
+  },
 };
 
 // Servicios de usuarios
 export const userService = {
+  // Métodos públicos (no requieren token)
   getRoles: () => {
-    return api.get('/users/roles');
+    return apiPublic.get("/users/roles");
   },
   createUser: (userData) => {
-    return api.post('/users/usuarios', userData);
+    return apiPublic.post("/users/usuarios", userData);
   },
-  updateUserProfile: (userData) => {
-    const userId = userData.id || ''; // O guarda el ID del usuario en AsyncStorage
-    return api.put(`/users/usuarios/${userId}`, userData);
-  },
-  getUserProfile: async () => {
+
+  // Métodos privados (requieren token)
+  updateUserProfile: async (userData) => {
     try {
-      // Obtener el ID del usuario del token JWT decodificado
-      const token = await AsyncStorage.getItem('token');
+      // Get user ID from token instead of relying on userData.id
+      const token = await AsyncStorage.getItem("token");
       const userId = await getUserIdFromToken(token);
-      
+
       if (!userId) {
-        throw new Error('No se pudo obtener el ID del usuario');
+        throw new Error("No se pudo obtener el ID del usuario");
       }
-      
-      const response = await api.get(`/users/usuarios/${userId}`);
-      return response;
+
+      return apiPrivate.put(`/users/usuarios/${userId}`, userData);
     } catch (error) {
-      console.error('Error al obtener perfil:', error);
+      console.error("Error updating profile:", error);
       throw error;
     }
+  },
+
+getUserProfile: async () => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) throw new Error('ID de usuario no disponible');
+    
+    const [userResponse, accountResponse] = await Promise.all([
+      apiPrivate.get(`/users/usuarios/${userId}`),
+      apiPrivate.get(`/users/cuenta-app/by-user/${userId}`).catch(() => null)
+    ]);
+    
+    return {
+      data: {
+        ...userResponse.data,
+        nombre_usuario: accountResponse?.data?.nombre_usuario
+      }
+    };
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    throw error;
   }
+}
+
 };
 
 // Función para decodificar el token y obtener el ID del usuario
 const getUserIdFromToken = async (token) => {
   if (!token) return null;
-  
+
   try {
-    // Decodificar el token JWT (puedes usar bibliotecas como jwt-decode)
-    // Por simplicidad, acá estoy extrayendo el payload manualmente
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
-      atob(base64).split('').map((c) => {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join('')
+      atob(base64)
+        .split("")
+        .map((c) => {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
     );
-    
+
     const payload = JSON.parse(jsonPayload);
-    return payload.id_usuario; // Este es el campo que guarda el API Gateway en el token
+    return payload.id_usuario;
   } catch (error) {
-    console.error('Error al decodificar token:', error);
+    console.error("Error al decodificar token:", error);
     return null;
   }
 };
+

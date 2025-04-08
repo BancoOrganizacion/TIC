@@ -7,7 +7,7 @@ import SplashScreen from "./screens/SplashScreen";
 import Login from "./screens/Login";
 import Home from "./screens/Home";
 import Register from "./screens/Register";
-import Code from "./screens/Code";  
+import Code from "./screens/Verification";  
 import CreateRestriction from "./screens/CreateRestriction";
 import RestrictionsList from "./screens/RestrictionsList";
 import EditRestriction from "./screens/EditRestriction";
@@ -27,7 +27,7 @@ export default function App() {
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Register" component={Register} />
-        <Stack.Screen name="Code" component={Code} />
+        <Stack.Screen name="Verification" component={Code} />
         <Stack.Screen name="RestrictionsList" component={RestrictionsList} />
         <Stack.Screen name="CreateRestriction" component={CreateRestriction} />
         <Stack.Screen name="EditRestriction" component={EditRestriction} />

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   SafeAreaView, 
   View, 
@@ -6,13 +6,82 @@ import {
   Text, 
   Image, 
   StyleSheet,
-  TouchableOpacity 
+  TouchableOpacity,
+  ActivityIndicator
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userService } from "../services/api";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Obtener datos del usuario desde AsyncStorage (caché)
+        const [storedProfile, storedUsername] = await Promise.all([
+          AsyncStorage.getItem('userProfile'),
+          AsyncStorage.getItem('nombre_usuario')
+        ]);
+
+        if (storedProfile) {
+          setUserData(JSON.parse(storedProfile));
+        }
+
+        // Obtener datos actualizados del backend
+        const response = await userService.getUserProfile();
+        if (response?.data) {
+          const fullProfile = {
+            ...response.data,
+            nombre_usuario: response.data.nombre_usuario || storedUsername || ""
+          };
+          
+          setUserData(fullProfile);
+          
+          // Guardar en AsyncStorage para futuras cargas rápidas
+          await AsyncStorage.setItem('userProfile', JSON.stringify(fullProfile));
+          if (fullProfile.nombre_usuario) {
+            await AsyncStorage.setItem('nombre_usuario', fullProfile.nombre_usuario);
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar datos del usuario:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      // Limpiar datos de autenticación
+      await AsyncStorage.multiRemove(['token', 'userProfile', 'nombre_usuario']);
+      
+      // Redirigir al login
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#5C2684" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,29 +94,36 @@ const ProfileScreen = () => {
         {/* Profile Image */}
         <View style={styles.profileImageContainer}>
           <Image
-            source={{uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/dggsx94n.png"}}
+            source={userData?.foto ? 
+              { uri: userData.foto } : 
+              { uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/dggsx94n.png" }}
             style={styles.profileImage}
-            resizeMode="stretch"
+            resizeMode="contain"
           />
         </View>
         
         {/* User Name */}
         <View style={styles.nameContainer}>
-          <Text style={styles.nameText}>Ana Campoverde</Text>
+          <Text style={styles.nameText}>
+            {userData?.nombre || 'Nombre'} {userData?.apellido || 'Apellido'}
+          </Text>
+          {userData?.nombre_usuario && (
+            <Text style={styles.usernameText}>@{userData.nombre_usuario}</Text>
+          )}
         </View>
         
         {/* Personal Info Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Personal Info</Text>
+          <Text style={styles.sectionTitle}>Información Personal</Text>
           
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate("UserProfile")}
           >
             <Image
-              source={{uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/5k8uftb4.png"}}
+              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/5k8uftb4.png" }}
               style={styles.menuIcon}
-              resizeMode="stretch"
+              resizeMode="contain"
             />
             <Text style={styles.menuText}>Tu perfil</Text>
           </TouchableOpacity>
@@ -59,9 +135,9 @@ const ProfileScreen = () => {
             onPress={() => navigation.navigate("TransactionHistory")}
           >
             <Image
-              source={{uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/8zne9x1w.png"}}
+              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/8zne9x1w.png" }}
               style={styles.menuIcon}
-              resizeMode="stretch"
+              resizeMode="contain"
             />
             <Text style={styles.menuText}>Historial de transacciones</Text>
           </TouchableOpacity>
@@ -71,31 +147,30 @@ const ProfileScreen = () => {
         
         {/* Security Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Security</Text>
+          <Text style={styles.sectionTitle}>Seguridad</Text>
           
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate("BiometricPatterns")}
           >
             <Image
-              source={{uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/eff5jcnz.png"}}
+              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/eff5jcnz.png" }}
               style={styles.menuIcon}
-              resizeMode="stretch"
+              resizeMode="contain"
             />
             <Text style={styles.menuText}>Patrones</Text>
           </TouchableOpacity>
           
           <View style={styles.separator} />
 
-          
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate("RestrictionsList")}
           >
             <Image
-              source={{uri: "https://cdn-icons-png.flaticon.com/512/3064/3064155.png"}}
+              source={{ uri: "https://cdn-icons-png.flaticon.com/512/3064/3064155.png" }}
               style={styles.menuIcon}
-              resizeMode="stretch"
+              resizeMode="contain"
             />
             <Text style={styles.menuText}>Restricciones</Text>
           </TouchableOpacity>
@@ -106,13 +181,7 @@ const ProfileScreen = () => {
         {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutButton}
-          onPress={() => {
-            // Lógica para cerrar sesión
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          }}
+          onPress={handleLogout}
         >
           <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
@@ -130,6 +199,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -161,6 +234,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "600",
     color: "#1C1B1F",
+  },
+  usernameText: {
+    fontSize: 16,
+    color: "#83898F",
+    marginTop: 5,
   },
   sectionContainer: {
     paddingHorizontal: 20,
