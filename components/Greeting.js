@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Image, Text, StyleSheet } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native'; 
 
 
 const Greeting = ({ style }) => {
@@ -14,43 +15,48 @@ const Greeting = ({ style }) => {
     return `${year}.${month}.${day}`;
   };
   
-  useEffect(() => {
-    const loadUserName = async () => {
-      try {
-        // First attempt: Try to get the real name directly from AsyncStorage
-        const nombreReal = await AsyncStorage.getItem('nombreReal');
-        if (nombreReal) {
-          setName(nombreReal);
-          return;
-        }
-        
-        // Second attempt: Try to get user profile from AsyncStorage
-        const storedProfile = await AsyncStorage.getItem('userProfile');
-        if (storedProfile) {
-          try {
-            const profileData = JSON.parse(storedProfile);
-            if (profileData && profileData.nombre) {
-              // Use the real name from user profile
-              setName(profileData.nombre);
-              // Save for future quick access
-              await AsyncStorage.setItem('nombreReal', profileData.nombre);
-              return;
-            }
-          } catch (err) {
-            console.error('Error parsing stored profile:', err);
+  const loadUserName = async () => {
+    try {
+      // Obtener directamente del userProfile que es la fuente de verdad
+      const storedProfile = await AsyncStorage.getItem('userProfile');
+      if (storedProfile) {
+        try {
+          const profileData = JSON.parse(storedProfile);
+          if (profileData && profileData.nombre) {
+            setName(profileData.nombre);
+            return;
           }
+        } catch (err) {
+          console.error('Error parsing stored profile:', err);
         }
-        
-        // Use a default name if no data is found
-        setName("User");
-      } catch (error) {
-        console.error('Error loading user name:', error);
-        setName("User");
       }
-    };
-    
+      
+      // Si no hay perfil guardado, intentar con nombreReal como respaldo
+      const nombreReal = await AsyncStorage.getItem('nombreReal');
+      if (nombreReal) {
+        setName(nombreReal);
+        return;
+      }
+      
+      // Usar un nombre por defecto si no hay datos
+      setName("Usuario");
+    } catch (error) {
+      console.error('Error loading user name:', error);
+      setName("Usuario");
+    }
+  };
+  
+  // Cargar cuando el componente se monta
+  useEffect(() => {
     loadUserName();
   }, []);
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserName();
+      return () => {}; // Cleanup function
+    }, [])
+  );
   
   return (
     <View style={[styles.container, style]}>
@@ -79,7 +85,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginRight: 12,
-    borderRadius: 12, // Optional: if you want a circular image
+    borderRadius: 12,
   },
   textContainer: {
     flex: 1,

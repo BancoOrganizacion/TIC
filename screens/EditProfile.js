@@ -103,17 +103,17 @@ const EditProfile = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.nombre.trim()) {
+    if (!userData.nombre.trim()) {
       newErrors.nombre = "El nombre es requerido";
     }
     
-    if (!formData.apellido.trim()) {
+    if (!userData.apellido.trim()) {
       newErrors.apellido = "El apellido es requerido";
     }
     
-    if (!formData.email.trim()) {
+    if (!userData.email.trim()) {
       newErrors.email = "El email es requerido";
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+    } else if (!/^\S+@\S+\.\S+$/.test(userData.email)) {
       newErrors.email = "Ingrese un email válido";
     }
     
@@ -134,11 +134,19 @@ const EditProfile = () => {
       
       if (!hasChanges) {
         Alert.alert("Información", "No hay cambios para guardar");
+        setIsLoading(false);
         return;
       }
 
+      const updateData = {
+        nombre: userData.nombre,
+        apellido: userData.apellido,
+        email: userData.email,
+        telefono: userData.telefono
+      };
+
       // Actualizar perfil en el backend
-      const response = await userService.updateUserProfile(userData);
+      const response = await userService.updateUserProfile(updateData);
       
       if (response.data) {
         // Actualizar datos en AsyncStorage
@@ -156,8 +164,8 @@ const EditProfile = () => {
         ]);
       }
     } catch (error) {
-      console.error("Error saving profile:", error);
-      Alert.alert("Error", "No se pudo actualizar el perfil");
+      console.error("Error saving profile:", error.response?.data || error.message);
+    Alert.alert("Error", "No se pudo actualizar el perfil");
     } finally {
       setIsLoading(false);
     }

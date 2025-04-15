@@ -242,15 +242,9 @@ export const userService = {
   // Métodos privados (requieren token)
   updateUserProfile: async (userData) => {
     try {
-      // Get user ID from token instead of relying on userData.id
       const token = await AsyncStorage.getItem("token");
       const userId = await getUserIdFromToken(token);
-
-      if (!userId) {
-        throw new Error("No se pudo obtener el ID del usuario");
-      }
-
-      return apiPrivate.put(`/users/usuarios/${userId}`, userData);
+      return apiPrivate.put('/users/perfil', userData);
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;
