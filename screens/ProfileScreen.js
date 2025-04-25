@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useCallback  } from "react";
 import { 
   SafeAreaView, 
   View, 
@@ -18,45 +18,62 @@ const ProfileScreen = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Obtener datos del usuario desde AsyncStorage (caché)
+      const [storedProfile, storedUsername] = await Promise.all([
+        AsyncStorage.getItem('userProfile'),
+        AsyncStorage.getItem('nombre_usuario')
+      ]);
+
+      if (storedProfile) {
+        setUserData(JSON.parse(storedProfile));
+        setIsLoading(false); // Mostrar datos en caché mientras actualizamos
+      }
+
+      // Obtener datos actualizados del backend
+      const response = await userService.getUserProfile();
+      if (response?.data) {
+        const fullProfile = {
+          ...response.data,
+          nombre_usuario: response.data.nombre_usuario || storedUsername || ""
+        };
+        
+        setUserData(fullProfile);
+        
+        // Guardar en AsyncStorage para futuras cargas rápidas
+        await AsyncStorage.setItem('userProfile', JSON.stringify(fullProfile));
+        if (fullProfile.nombre_usuario) {
+          await AsyncStorage.setItem('nombre_usuario', fullProfile.nombre_usuario);
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar datos del usuario:", error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Obtener datos del usuario desde AsyncStorage (caché)
-        const [storedProfile, storedUsername] = await Promise.all([
-          AsyncStorage.getItem('userProfile'),
-          AsyncStorage.getItem('nombre_usuario')
-        ]);
+    // Cargar datos al montar el componente
+    fetchUserData();
+    
+    // Configurar listener para actualizar datos cuando la pantalla reciba foco
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchUserData();
+    });
+    
+    // Limpiar el listener al desmontar
+    return unsubscribe;
+  }, [navigation]);
 
-        if (storedProfile) {
-          setUserData(JSON.parse(storedProfile));
-        }
-
-        // Obtener datos actualizados del backend
-        const response = await userService.getUserProfile();
-        if (response?.data) {
-          const fullProfile = {
-            ...response.data,
-            nombre_usuario: response.data.nombre_usuario || storedUsername || ""
-          };
-          
-          setUserData(fullProfile);
-          
-          // Guardar en AsyncStorage para futuras cargas rápidas
-          await AsyncStorage.setItem('userProfile', JSON.stringify(fullProfile));
-          if (fullProfile.nombre_usuario) {
-            await AsyncStorage.setItem('nombre_usuario', fullProfile.nombre_usuario);
-          }
-        }
-      } catch (error) {
-        console.error("Error al cargar datos del usuario:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchUserData();
   }, []);
 
@@ -74,6 +91,7 @@ const ProfileScreen = () => {
       console.error("Error al cerrar sesión:", error);
     }
   };
+
 
   if (isLoading) {
     return (

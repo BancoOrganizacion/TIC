@@ -208,6 +208,7 @@ export default () => {
         throw new Error("No se pudo generar enlace de Telegram");
       }
 
+      const encodedLink = encodeURI(telegramLink);
       Alert.alert(
         "Vincula tu Telegram",
         "Para completar tu registro, por favor vincúlate con nuestro bot de Telegram",
@@ -217,13 +218,23 @@ export default () => {
             text: "Abrir Telegram",
             onPress: async () => {
               try {
-                await Linking.openURL(telegramLink);
+                // Check if Telegram is installed first
+                const canOpen = await Linking.canOpenURL(encodedLink);
+
+                if (canOpen) {
+                  await Linking.openURL(encodedLink);
+                } else {
+                  // Fallback to browser if Telegram app isn't installed
+                  await Linking.openURL(
+                    `https://t.me/${telegramLink.split("t.me/")[1]}`
+                  );
+                }
 
                 await authService.generateVerificationCode();
 
                 navigation.navigate("Verification", {
                   userId,
-                  telegramLink,
+                  telegramLink: encodedLink,
                   finalRolId: ROL_USUARIO_ID,
                 });
               } catch (error) {
@@ -332,7 +343,7 @@ export default () => {
       }
     } catch (error) {
       console.error("Error in registration:", error);
-
+      console.error("Error response data:", error.response?.data);
       // Format the error message properly
       let errorMessage = "Error en el registro";
 
@@ -605,5 +616,36 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     tintColor: "#737373",
+  },
+
+  errorText: {
+    color: "#FF3B30",
+    fontSize: 12,
+    marginLeft: 25,
+    marginTop: -15,
+    marginBottom: 15,
+    fontWeight: "500",
+  },
+
+  errorInput: {
+    borderColor: "#FF3B360",
+  },
+
+  validInput: {
+    borderColor: "#34C759",
+  },
+
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 25,
+    marginTop: -15,
+    marginBottom: 15,
+  },
+
+  errorIcon: {
+    width: 14,
+    height: 14,
+    marginRight: 5,
   },
 });

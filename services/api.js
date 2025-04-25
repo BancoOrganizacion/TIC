@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { use } from "react";
-//const API_GATEWAY = 'http://192.168.0.102:3000';
+//const API_GATEWAY = 'http://192.168.0.104:3000';
 const API_GATEWAY = "http://192.168.100.101:3000";
 // emulador android
 // const API_GATEWAY = 'http://10.0.2.2:3000';
@@ -33,16 +33,29 @@ apiPrivate.interceptors.request.use(
 );
 apiPrivate.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Log detailed error information
-    console.error("API Request Failed:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      data: error.config?.data,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      responseData: error.response?.data,
-    });
+  async (error) => {
+    // Si el error es 401 (Unauthorized) y hay un mensaje de token expirado
+    if (
+      error.response?.status === 401 &&
+      (error.response?.data?.message === "Token inválido o expirado" ||
+        error.response?.data?.message === "jwt expired")
+    ) {
+      console.log("Token expirado, redirigiendo a login");
+
+      // Limpiar tokens almacenados
+      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+      // Usar la navigation global o un navegador de referencia para redirigir
+      // Esto requerirá configurar un navigationRef en algún lugar de tu app
+      const { NavigationService } = require("../services/NavigationService");
+      NavigationService.reset("Login");
+
+      // Mostrar alerta al usuario
+      Alert.alert(
+        "Sesión expirada",
+        "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
+      );
+    }
 
     return Promise.reject(error);
   }
@@ -75,6 +88,12 @@ export const authService = {
       if (!response.data || !response.data.deepLink) {
         console.error("Unexpected response format:", response.data);
         throw new Error("Respuesta inesperada del servidor");
+      }
+
+      let deepLink = response.data.deepLink;
+      if (!deepLink.startsWith("https://") && !deepLink.startsWith("tg://")) {
+        // Assume it's a bot username and format properly
+        deepLink = `https://t.me/${deepLink.replace("@", "")}`;
       }
 
       return response;
@@ -244,7 +263,7 @@ export const userService = {
     try {
       const token = await AsyncStorage.getItem("token");
       const userId = await getUserIdFromToken(token);
-      return apiPrivate.put('/users/perfil', userData);
+      return apiPrivate.put("/users/usuarios/perfil", userData);
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;
@@ -260,7 +279,6 @@ export const userService = {
 
       const [userResponse, accountResponse] = await Promise.all([
         apiPrivate.get(`/users/usuarios/${userId}`),
-        apiPrivate.get(`/users/cuenta-app/by-user/${userId}`).catch(() => null),
       ]);
 
       return {

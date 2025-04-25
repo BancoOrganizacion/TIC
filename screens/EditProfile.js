@@ -8,14 +8,14 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
 import Button from "../components/Button";
 import BackButton from "../components/BackButton";
 import { userService } from "../services/api";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const EditProfile = () => {
   const navigation = useNavigation();
@@ -40,7 +40,7 @@ const EditProfile = () => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Cargar datos del perfil
         if (route.params?.userProfile) {
           setupUserData(route.params.userProfile);
@@ -50,13 +50,12 @@ const EditProfile = () => {
             setupUserData(response.data);
           }
         }
-        
+
         // Cargar nombre de usuario desde AsyncStorage
-        const username = await AsyncStorage.getItem('nombre_usuario');
+        const username = await AsyncStorage.getItem("nombre_usuario");
         if (username) {
-          setReadOnlyData(prev => ({...prev, nombre_usuario: username}));
+          setReadOnlyData((prev) => ({ ...prev, nombre_usuario: username }));
         }
-        
       } catch (error) {
         console.error("Error loading profile:", error);
         Alert.alert("Error", "No se pudo cargar el perfil");
@@ -90,7 +89,7 @@ const EditProfile = () => {
       ...userData,
       [field]: value,
     });
-    
+
     // Limpiar error si existe
     if (errors[field]) {
       setErrors({
@@ -102,36 +101,50 @@ const EditProfile = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!userData.nombre.trim()) {
       newErrors.nombre = "El nombre es requerido";
     }
-    
+
     if (!userData.apellido.trim()) {
       newErrors.apellido = "El apellido es requerido";
     }
-    
+
     if (!userData.email.trim()) {
       newErrors.email = "El email es requerido";
     } else if (!/^\S+@\S+\.\S+$/.test(userData.email)) {
       newErrors.email = "Ingrese un email válido";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    
+
     try {
       setIsLoading(true);
-      
+
+      // Verificar token
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert(
+          "Sesión expirada",
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
+        );
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Login" }],
+        });
+        return;
+      }
+
       // Verificar si hay cambios reales
       const hasChanges = Object.keys(userData).some(
-        key => userData[key] !== originalUserData[key]
+        (key) => userData[key] !== originalUserData[key]
       );
-      
+
       if (!hasChanges) {
         Alert.alert("Información", "No hay cambios para guardar");
         setIsLoading(false);
@@ -142,12 +155,12 @@ const EditProfile = () => {
         nombre: userData.nombre,
         apellido: userData.apellido,
         email: userData.email,
-        telefono: userData.telefono
+        telefono: userData.telefono,
       };
 
       // Actualizar perfil en el backend
       const response = await userService.updateUserProfile(updateData);
-      
+
       if (response.data) {
         // Actualizar datos en AsyncStorage
         const updatedProfile = {
@@ -155,17 +168,28 @@ const EditProfile = () => {
           cedula: readOnlyData.cedula,
           nombre_usuario: readOnlyData.nombre_usuario,
         };
-        
-        await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-        
+
+        await AsyncStorage.setItem(
+          "userProfile",
+          JSON.stringify(updatedProfile)
+        );
+
+        setOriginalUserData({ ...userData });
+
         // Notificar éxito
         Alert.alert("Éxito", "Perfil actualizado correctamente", [
-          { text: "OK", onPress: () => navigation.goBack() }
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
         ]);
       }
     } catch (error) {
-      console.error("Error saving profile:", error.response?.data || error.message);
-    Alert.alert("Error", "No se pudo actualizar el perfil");
+      console.error(
+        "Error saving profile:",
+        error.response?.data || error.message
+      );
+      Alert.alert("Error", "No se pudo actualizar el perfil");
     } finally {
       setIsLoading(false);
     }
@@ -197,7 +221,9 @@ const EditProfile = () => {
               onChangeText={(text) => handleChange("nombre", text)}
               placeholder="Ingrese su nombre"
             />
-            {errors.nombre && <Text style={styles.errorText}>{errors.nombre}</Text>}
+            {errors.nombre && (
+              <Text style={styles.errorText}>{errors.nombre}</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -208,7 +234,9 @@ const EditProfile = () => {
               onChangeText={(text) => handleChange("apellido", text)}
               placeholder="Ingrese su apellido"
             />
-            {errors.apellido && <Text style={styles.errorText}>{errors.apellido}</Text>}
+            {errors.apellido && (
+              <Text style={styles.errorText}>{errors.apellido}</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -221,7 +249,9 @@ const EditProfile = () => {
               autoCapitalize="none"
               placeholder="Ingrese su correo electrónico"
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            {errors.email && (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -272,25 +302,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   center: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   formContainer: {
     padding: 16,
@@ -300,26 +330,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     fontSize: 16,
   },
   disabledInput: {
-    backgroundColor: '#f5f5f5',
-    color: '#666',
+    backgroundColor: "#f5f5f5",
+    color: "#666",
   },
   inputError: {
-    borderColor: '#ff0000',
+    borderColor: "#ff0000",
   },
   errorText: {
-    color: '#ff0000',
+    color: "#ff0000",
     fontSize: 12,
     marginTop: 4,
   },
