@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -8,52 +8,128 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import BackButton from "../components/BackButton"; 
-import Greeting from "../components/Greeting"; 
-import BottomNavBar from "../components/BottomNavBar"; 
+import { useNavigation, useRoute } from "@react-navigation/native";
+import BackButton from "../components/BackButton";
+import Greeting from "../components/Greeting";
+import BottomNavBar from "../components/BottomNavBar";
 import Button from "../components/Button";
-const EditRestrictionScreen = () => {
-  const [fromAmount, setFromAmount] = useState("101");
-  const [toAmount, setToAmount] = useState("500");
-  const navigation = useNavigation();
+import { accountService } from "../services/api";
 
-  const handleSave = () => {
-    alert("Restricción guardada");
-    // Lógica para guardar la restricción
+const EditRestrictionScreen = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { restriction, accountId, onSave } = route.params;
+  
+  const [fromAmount, setFromAmount] = useState(restriction.monto_desde.toString());
+  const [toAmount, setToAmount] = useState(restriction.monto_hasta.toString());
+  const [fingerprints, setFingerprints] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Datos quemados de patrones de huellas
+  const mockPatterns = [
+    { _id: "1", nombre: "Huella Derecha", descripcion: "Dedo índice derecho" },
+    { _id: "2", nombre: "Huella Izquierda", descripcion: "Dedo índice izquierdo" }
+  ];
+
+  useEffect(() => {
+    loadFingerprintPatterns();
+  }, []);
+
+  const loadFingerprintPatterns = async () => {
+    try {
+      // DATOS QUEMADOS SOLO PARA HUELLAS
+      const mockPatterns = [
+        { 
+          _id: "1", 
+          nombre: "Huella Derecha", 
+          descripcion: "Dedo índice derecho",
+          imagen: require("../assets/images/fingerprint.png")
+        },
+        { 
+          _id: "2", 
+          nombre: "Huella Izquierda", 
+          descripcion: "Dedo índice izquierdo",
+          imagen: require("../assets/images/fingerprint.png")
+        }
+      ];
+      
+      setFingerprints(mockPatterns);
+
+    } catch (error) {
+      console.error("Error cargando patrones:", error);
+      // Usar datos quemados si hay error
+      setFingerprints(mockPatterns);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!fromAmount || !toAmount) {
+      Alert.alert("Error", "Por favor completa todos los campos");
+      return;
+    }
+
+    if (parseFloat(fromAmount) >= parseFloat(toAmount)) {
+      Alert.alert("Error", "El monto 'Desde' debe ser menor que 'Hasta'");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const updatedData = {
+        monto_desde: parseFloat(fromAmount),
+        monto_hasta: parseFloat(toAmount),
+        // El backend debe manejar el patrón de huellas
+        patron_autenticacion: fingerprints.length > 0 ? "huella_requerida" : null
+      };
+      
+      await accountService.updateAccountRestriction(
+        accountId, 
+        restriction._id, 
+        updatedData
+      );
+      
+      Alert.alert("Éxito", "Restricción actualizada");
+      if (onSave) onSave();
+      navigation.goBack();
+    } catch (error) {
+      console.error("Error guardando:", error);
+      Alert.alert("Error", "No se pudo actualizar la restricción");
+    }
   };
 
   const handleAddFingerprint = () => {
-    navigation.navigate("AddFingerprint"); // Navegar a la pantalla de agregar huella
+    navigation.navigate("AddFingerprint", {
+      patterns: fingerprints,
+      onAdd: (newPattern) => {
+        setFingerprints([...fingerprints, newPattern]);
+      }
+    });
   };
 
-  const handleDeleteFingerprint = (index) => {
-    alert(`Huella ${index + 1} eliminada`);
-    // Lógica para eliminar la huella
+  const handleDeleteFingerprint = (id) => {
+    setFingerprints(fingerprints.filter(fp => fp._id !== id));
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* Saludo "Hi, Ana!" con la fecha de hoy */}
         <Greeting name="Ana" />
 
-        {/* Título "Editar restricción" con BackButton a la izquierda */}
         <View style={styles.titleContainer}>
           <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.titleText}>Editar restricción</Text>
         </View>
 
-        {/* Campos de "Desde" y "Hasta" */}
         <View style={styles.amountContainer}>
           <View style={styles.amountInputContainer}>
             <Text style={styles.label}>Desde</Text>
             <View style={styles.inputRow}>
               <Image
-                source={{
-                  uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/41296732-ba63-4249-8234-f0ebf39041f3",
-                }}
+                source={require("../assets/images/amount.png")}
+                resizeMode={"stretch"}
                 style={styles.icon}
               />
               <TextInput
@@ -70,9 +146,8 @@ const EditRestrictionScreen = () => {
             <Text style={styles.label}>Hasta</Text>
             <View style={styles.inputRow}>
               <Image
-                source={{
-                  uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3d3fc587-05d1-4a0d-8a00-05345e43e4be",
-                }}
+                source={require("../assets/images/amount.png")}
+                resizeMode={"stretch"}
                 style={styles.icon}
               />
               <TextInput
@@ -86,73 +161,51 @@ const EditRestrictionScreen = () => {
           </View>
         </View>
 
-        {/* Lista de huellas */}
         <View style={styles.fingerprintsContainer}>
-          <Text style={styles.sectionTitle}>Huellas</Text>
+          <Text style={styles.sectionTitle}>
+            Huellas ({fingerprints.length} configuradas)
+          </Text>
 
-          {/* Huella 1 */}
-          <View style={styles.fingerprintRow}>
-            <Text style={styles.fingerprintNumber}>1.</Text>
-            <Image
-              source={{
-                uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/bee7e6d0-046c-487b-a1f0-a5340a97beed",
-              }}
-              style={styles.fingerprintIcon}
-            />
-            <Text style={styles.fingerprintText}>Keyword 1</Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteFingerprint(0)}
-              style={styles.deleteButton}
-            >
+          {fingerprints.map((fingerprint, index) => (
+            <View key={fingerprint._id} style={styles.fingerprintRow}>
+              <Text style={styles.fingerprintNumber}>{index + 1}.</Text>
               <Image
-                source={{
-                  uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c2ff8cec-cdd4-4a4a-be1e-2b15cffb4ff8",
-                }}
-                style={styles.deleteIcon}
+                source={require("../assets/images/fingerprint.png")}
+                resizeMode={"stretch"}
+                style={styles.fingerprintIcon}
               />
-            </TouchableOpacity>
-          </View>
-
-          {/* Huella 2 */}
-          <View style={styles.fingerprintRow}>
-            <Text style={styles.fingerprintNumber}>2.</Text>
-            <Image
-              source={{
-                uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/1b9e65a0-0be9-4936-8545-ab525ef2d6f3",
-              }}
-              style={styles.fingerprintIcon}
-            />
-            <Text style={styles.fingerprintText}>Keyword 2</Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteFingerprint(1)}
-              style={styles.deleteButton}
-            >
-              <Image
-                source={{
-                  uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/48a7840e-a756-4e86-9a46-aa7bff677f5f",
-                }}
-                style={styles.deleteIcon}
-              />
-            </TouchableOpacity>
-          </View>
+              <View style={styles.fingerprintInfo}>
+                <Text style={styles.fingerprintText}>{fingerprint.nombre}</Text>
+                <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleDeleteFingerprint(fingerprint._id)}
+                style={styles.deleteButton}
+              >
+                <Image
+                  source={require("../assets/images/delete.png")}
+                  resizeMode={"stretch"}
+                  style={styles.deleteIcon}
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       </ScrollView>
 
-      {/* Botón "Guardar restricción" */}
       <View style={styles.saveButtonContainer}>
         <Button
-          title="Guardar restricción"
+          title={loading ? "Guardando..." : "Guardar restricción"}
           onPress={handleSave}
           style={styles.saveButton}
+          disabled={loading}
         />
       </View>
 
-      {/* Botón "Agregar otra huella" */}
       <TouchableOpacity style={styles.addButton} onPress={handleAddFingerprint}>
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
 
-      {/* Barra de navegación inferior */}
       <BottomNavBar />
     </SafeAreaView>
   );
@@ -268,6 +321,16 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     width: "100%",
+  },
+  errorContainer: {
+    backgroundColor: "#FFEBEE",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: "#D32F2F",
+    textAlign: "center",
   },
 });
 

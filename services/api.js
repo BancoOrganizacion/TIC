@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { use } from "react";
-//const API_GATEWAY = 'http://192.168.0.104:3000';
+//const API_GATEWAY = 'http://192.168.0.102:3000';
 const API_GATEWAY = "http://192.168.100.101:3000";
 // emulador android
 // const API_GATEWAY = 'http://10.0.2.2:3000';
@@ -18,19 +18,27 @@ const apiPrivate = axios.create({
 
 apiPrivate.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log("Using token in request:", token.substring(0, 10) + "...");
-    } else {
-      console.warn("No token found for request to:", config.url);
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log("Using token in request:", token.substring(0, 10) + "...");
+      } else {
+        console.warn("No token found for request to:", config.url);
+        // Redirigir a login si no hay token
+        NavigationService.reset("Login");
+      }
+      return config;
+    } catch (error) {
+      console.error("Error getting token:", error);
+      return Promise.reject(error);
     }
-    return config;
   },
   (error) => {
     return Promise.reject(error);
   }
 );
+
 apiPrivate.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -291,6 +299,140 @@ export const userService = {
       console.error("Error al obtener perfil:", error);
       throw error;
     }
+  },
+};
+
+export const accountService = {
+  // Get user's accounts
+  getMyAccounts: async () => {
+    try {
+      const response = await apiPrivate.get("/accounts/cuentas/mis-cuentas");
+      console.log("My accounts response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error getting accounts:", error);
+      throw error;
+    }
+  },
+
+  // Create a new account
+  createAccount: async (accountType) => {
+    try {
+      const response = await apiPrivate.post("/accounts/cuentas", {
+        tipo_cuenta: accountType, // 'CORRIENTE' or 'AHORROS'
+      });
+      console.log("Create account response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error creating account:", error);
+      throw error;
+    }
+  },
+
+  // Get account by number
+  getAccountByNumber: async (accountNumber) => {
+    try {
+      const response = await apiPrivate.get(
+        `/accounts/cuentas/numero/${accountNumber}`
+      );
+      console.log("Account by number response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error getting account by number:", error);
+      throw error;
+    }
+  },
+
+  // Cancel an account
+  cancelAccount: async (accountId) => {
+    try {
+      const response = await apiPrivate.delete(
+        `/accounts/cuentas/${accountId}`
+      );
+      console.log("Cancel account response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error canceling account:", error);
+      throw error;
+    }
+  },
+
+  // Get account transactions
+  getAccountTransactions: async (accountId) => {
+    try {
+      const response = await apiPrivate.get(
+        `/accounts/cuentas/${accountId}/movimientos`
+      );
+      console.log("Account transactions response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error getting account transactions:", error);
+      throw error;
+    }
+  },
+
+  // Add account restriction
+  addAccountRestriction: async (accountId, restriction) => {
+    try {
+      const response = await apiPrivate.post(
+        `/accounts/cuentas/${accountId}/restricciones`,
+        restriction
+      );
+      console.log("Add restriction response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error adding restriction:", error);
+      throw error;
+    }
+  },
+
+  // Remove account restriction
+  removeAccountRestriction: async (accountId, restrictionId) => {
+    try {
+      const response = await apiPrivate.delete(
+        `/accounts/cuentas/${accountId}/restricciones/${restrictionId}`
+      );
+      console.log("Remove restriction response:", response.status);
+      return response;
+    } catch (error) {
+      console.error("Error removing restriction:", error);
+      throw error;
+    }
+  },
+
+  // Get account restrictions with mock data
+  getAccountRestrictions: async (accountId) => {
+    return apiPrivate.get(`/accounts/cuentas/${accountId}/restricciones`);
+  },
+
+  updateAccountRestriction: async (accountId, restrictionId, updates) => {
+    return apiPrivate.put(
+      `/accounts/cuentas/${accountId}/restricciones/${restrictionId}`,
+      updates
+    );
+  },
+
+  // Método MOCK para huellas
+  getFingerprintPatterns: async () => {
+    // Simular delay de red
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    return {
+      data: [
+        {
+          _id: "mock_1",
+          nombre: "Huella Derecha",
+          descripcion: "Dedo índice derecho",
+          requiere_autenticacion: true,
+        },
+        {
+          _id: "mock_2",
+          nombre: "Huella Izquierda",
+          descripcion: "Dedo índice izquierdo",
+          requiere_autenticacion: true,
+        },
+      ],
+    };
   },
 };
 

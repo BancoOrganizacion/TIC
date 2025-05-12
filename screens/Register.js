@@ -35,7 +35,7 @@ export default () => {
   // El rol de usuario regular
   const ROL_USUARIO_ID = "67ec71573b2822762122e79a";
   // Rol temporal para usuarios en proceso de verificación (debes crear este rol en tu backend)
-  const ROL_USUARIO_REGISTRADO_ID = "67f498c2384e616c30a4a074";
+  const ROL_USUARIO_REGISTRADO_ID = "681144a24ea765b9fe82406f";
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
@@ -141,34 +141,82 @@ export default () => {
     return true;
   };
 
-  const validatePassword = () => {
-    const { password } = formData;
-    if (!password) {
-      setErrors({ ...errors, password: "La contraseña es requerida" });
-      return false;
-    }
-    if (password.length < 8) {
-      setErrors({
-        ...errors,
-        password: "La contraseña debe tener al menos 8 caracteres",
-      });
-      return false;
-    }
-    return true;
-  };
+// Función de validación de contraseña mejorada
+const validatePassword = (value) => {
+  handleChange("password", value);
+  
+  // Si no hay valor
+  if (!value) {
+    setErrors({ ...errors, password: "La contraseña es requerida" });
+    return false;
+  }
+  
+  // Si no tiene al menos 8 caracteres
+  if (value.length < 8) {
+    setErrors({
+      ...errors,
+      password: "La contraseña debe tener al menos 8 caracteres",
+    });
+    return false;
+  }
+  
+  // Validar que tenga al menos una mayúscula
+  if (!/[A-Z]/.test(value)) {
+    setErrors({
+      ...errors,
+      password: "La contraseña debe contener al menos una letra mayúscula",
+    });
+    return false;
+  }
+  
+  // Validar que tenga al menos una minúscula
+  if (!/[a-z]/.test(value)) {
+    setErrors({
+      ...errors,
+      password: "La contraseña debe contener al menos una letra minúscula",
+    });
+    return false;
+  }
+  
+  // Validar que tenga al menos un número
+  if (!/\d/.test(value)) {
+    setErrors({
+      ...errors,
+      password: "La contraseña debe contener al menos un número",
+    });
+    return false;
+  }
+  
+  // Validar que tenga al menos un carácter especial
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) {
+    setErrors({
+      ...errors,
+      password: "La contraseña debe contener al menos un carácter especial",
+    });
+    return false;
+  }
+  
+  // Si cambia la contraseña, validar de nuevo la confirmación
+  if (formData.confirmPassword) {
+    validateConfirmPassword(formData.confirmPassword);
+  }
+  
+  return true;
+};
 
-  const validateConfirmPassword = () => {
-    const { password, confirmPassword } = formData;
-    if (!confirmPassword) {
-      setErrors({ ...errors, confirmPassword: "Confirma tu contraseña" });
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setErrors({ ...errors, confirmPassword: "Las contraseñas no coinciden" });
-      return false;
-    }
-    return true;
-  };
+const validateConfirmPassword = (value) => {
+  handleChange("confirmPassword", value);
+  if (!value) {
+    setErrors({ ...errors, confirmPassword: "Confirma tu contraseña" });
+    return false;
+  }
+  // Compara con el valor actualizado de password
+  if (formData.password !== value) {
+    setErrors({ ...errors, confirmPassword: "Las contraseñas no coinciden" });
+    return false;
+  }
+  return true;
+};
 
   const validateForm = () => {
     const isNombreValid = validateNombre(formData.nombre);
@@ -177,8 +225,8 @@ export default () => {
     const isTelefonoValid = validateTelefono(formData.telefono);
     const isEmailValid = validateEmail(formData.email);
     const isNombreUsuarioValid = validateNombreUsuario(formData.nombreUsuario);
-    const isPasswordValid = validatePassword();
-    const isConfirmPasswordValid = validateConfirmPassword();
+    const isPasswordValid = validatePassword(formData.password);
+    const isConfirmPasswordValid = validateConfirmPassword(formData.confirmPassword);
 
     return (
       isNombreValid &&
@@ -442,7 +490,7 @@ export default () => {
           <TextInput
             placeholder="Ingresa una contraseña"
             value={formData.password}
-            onChangeText={(text) => handleChange("password", text)}
+            onChangeText={validatePassword}
             secureTextEntry={!isPasswordVisible}
             style={styles.passwordInput}
           />
@@ -469,7 +517,7 @@ export default () => {
           <TextInput
             placeholder="Ingresa la contraseña otra vez"
             value={formData.confirmPassword}
-            onChangeText={(text) => handleChange("confirmPassword", text)}
+            onChangeText={validateConfirmPassword}
             secureTextEntry={!isConfirmPasswordVisible}
             style={styles.passwordInput}
           />

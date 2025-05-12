@@ -15,10 +15,7 @@ const BottomNavBar = () => {
 
   // Estilos condicionales para texto de botones activos
   const getTextStyle = (screenName) => {
-    return [
-      styles.navText,
-      isActive(screenName) && styles.activeNavText
-    ];
+    return [styles.navText, isActive(screenName) && styles.activeNavText];
   };
 
   return (
@@ -29,7 +26,9 @@ const BottomNavBar = () => {
         onPress={() => navigation.navigate("Home")}
       >
         <Image
-          source={{ uri: "https://cdn-icons-png.flaticon.com/512/263/263115.png" }} 
+          source={{
+            uri: "https://cdn-icons-png.flaticon.com/512/263/263115.png",
+          }}
           style={styles.navIcon}
         />
         <Text style={getTextStyle("Home")}>Inicio</Text>
@@ -41,8 +40,9 @@ const BottomNavBar = () => {
         onPress={() => navigation.navigate("TransactionHistory")}
       >
         <Image
-          source={{ uri: "https://cdn-icons-png.flaticon.com/512/709/709612.png" }}
-          style={styles.navIcon}
+          source={require("../assets/images/transfer.png")}
+          style={[styles.navIcon,styles.bigBoldIcon]}
+          resizeMode="contain"
         />
         <Text style={getTextStyle("TransactionHistory")}>Movimientos</Text>
       </TouchableOpacity>
@@ -53,7 +53,9 @@ const BottomNavBar = () => {
         onPress={() => navigation.navigate("ProfileScreen")}
       >
         <Image
-          source={{ uri: "https://cdn-icons-png.flaticon.com/512/1144/1144760.png" }}
+          source={{
+            uri: "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
+          }}
           style={styles.navIcon}
         />
         <Text style={getTextStyle("ProfileScreen")}>Perfil</Text>
@@ -88,6 +90,14 @@ const styles = StyleSheet.create({
     color: "#5C2684",
     fontWeight: "bold",
   },
+  bigBoldIcon: {
+    width: 32,  
+    height: 32,
+    tintColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 }
+  }
 });
 
 export default BottomNavBar;

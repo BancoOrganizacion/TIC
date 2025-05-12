@@ -1,17 +1,17 @@
-import React, { useState, useEffect,useCallback  } from "react";
-import { 
-  SafeAreaView, 
-  View, 
-  ScrollView, 
-  Text, 
-  Image, 
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  SafeAreaView,
+  View,
+  ScrollView,
+  Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { userService } from "../services/api";
 
 const ProfileScreen = () => {
@@ -23,11 +23,11 @@ const ProfileScreen = () => {
   const fetchUserData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Obtener datos del usuario desde AsyncStorage (caché)
       const [storedProfile, storedUsername] = await Promise.all([
-        AsyncStorage.getItem('userProfile'),
-        AsyncStorage.getItem('nombre_usuario')
+        AsyncStorage.getItem("userProfile"),
+        AsyncStorage.getItem("nombre_usuario"),
       ]);
 
       if (storedProfile) {
@@ -40,15 +40,18 @@ const ProfileScreen = () => {
       if (response?.data) {
         const fullProfile = {
           ...response.data,
-          nombre_usuario: response.data.nombre_usuario || storedUsername || ""
+          nombre_usuario: response.data.nombre_usuario || storedUsername || "",
         };
-        
+
         setUserData(fullProfile);
-        
+
         // Guardar en AsyncStorage para futuras cargas rápidas
-        await AsyncStorage.setItem('userProfile', JSON.stringify(fullProfile));
+        await AsyncStorage.setItem("userProfile", JSON.stringify(fullProfile));
         if (fullProfile.nombre_usuario) {
-          await AsyncStorage.setItem('nombre_usuario', fullProfile.nombre_usuario);
+          await AsyncStorage.setItem(
+            "nombre_usuario",
+            fullProfile.nombre_usuario
+          );
         }
       }
     } catch (error) {
@@ -62,12 +65,12 @@ const ProfileScreen = () => {
   useEffect(() => {
     // Cargar datos al montar el componente
     fetchUserData();
-    
+
     // Configurar listener para actualizar datos cuando la pantalla reciba foco
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       fetchUserData();
     });
-    
+
     // Limpiar el listener al desmontar
     return unsubscribe;
   }, [navigation]);
@@ -80,18 +83,21 @@ const ProfileScreen = () => {
   const handleLogout = async () => {
     try {
       // Limpiar datos de autenticación
-      await AsyncStorage.multiRemove(['token', 'userProfile', 'nombre_usuario']);
-      
+      await AsyncStorage.multiRemove([
+        "token",
+        "userProfile",
+        "nombre_usuario",
+      ]);
+
       // Redirigir al login
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Login' }],
+        routes: [{ name: "Login" }],
       });
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -108,106 +114,109 @@ const ProfileScreen = () => {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Perfil</Text>
         </View>
-        
+
         {/* Profile Image */}
         <View style={styles.profileImageContainer}>
           <Image
-            source={userData?.foto ? 
-              { uri: userData.foto } : 
-              { uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/dggsx94n.png" }}
+            source={
+              userData?.foto
+                ? { uri: userData.foto }
+                : {
+                    uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/dggsx94n.png",
+                  }
+            }
             style={styles.profileImage}
             resizeMode="contain"
           />
         </View>
-        
+
         {/* User Name */}
         <View style={styles.nameContainer}>
           <Text style={styles.nameText}>
-            {userData?.nombre || 'Nombre'} {userData?.apellido || 'Apellido'}
+            {userData?.nombre || "Nombre"} {userData?.apellido || "Apellido"}
           </Text>
           {userData?.nombre_usuario && (
             <Text style={styles.usernameText}>@{userData.nombre_usuario}</Text>
           )}
         </View>
-        
+
         {/* Personal Info Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Información Personal</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate("UserProfile")}
           >
             <Image
-              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/5k8uftb4.png" }}
+              source={{
+                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/5k8uftb4.png",
+              }}
               style={styles.menuIcon}
               resizeMode="contain"
             />
             <Text style={styles.menuText}>Tu perfil</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.separator} />
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate("TransactionHistory")}
           >
             <Image
-              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/8zne9x1w.png" }}
+              source={require("../assets/images/transaction.png")}
               style={styles.menuIcon}
               resizeMode="contain"
             />
             <Text style={styles.menuText}>Historial de transacciones</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.fullSeparator} />
-        
+
         {/* Security Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Seguridad</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate("BiometricPatterns")}
           >
             <Image
-              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/eff5jcnz.png" }}
+              source={require("../assets/images/fingerprint.png")}
               style={styles.menuIcon}
               resizeMode="contain"
             />
             <Text style={styles.menuText}>Patrones</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.separator} />
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate("RestrictionsList")}
           >
             <Image
-              source={{ uri: "https://cdn-icons-png.flaticon.com/512/3064/3064155.png" }}
+              source={require("../assets/images/restrictions.png")}
               style={styles.menuIcon}
               resizeMode="contain"
             />
             <Text style={styles.menuText}>Restricciones</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.fullSeparator} />
-        
+
         {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
-        
+
         {/* Space for BottomNavBar */}
         <View style={styles.bottomNavSpacer} />
       </ScrollView>
-      
+
       <BottomNavBar />
     </SafeAreaView>
   );
@@ -219,8 +228,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,98 +7,162 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import {useNavigation,useRoute } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar"; // Asegúrate de importar el componente
 import Greeting from "../components/Greeting"; // Componente reutilizable para el saludo
 import BackButton from "../components/BackButton"; // Componente reutilizable para el botón de regresar
+import { accountService } from "../services/api";
 
 const RestrictionsList = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const [restrictions, setRestrictions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const accountId = route.params?.accountId;
+
+  // Datos quemados para desarrollo
+  const mockRestrictions = [
+    {
+      _id: "1",
+      monto_desde: 0,
+      monto_hasta: 100,
+      patron_autenticacion: null,
+      huellas_requeridas: 1,
+    },
+    {
+      _id: "2",
+      monto_desde: 101,
+      monto_hasta: 500,
+      patron_autenticacion: "60d5ecb74e4e8d1b5cbf2457",
+      huellas_requeridas: 2,
+    },
+    {
+      _id: "3",
+      monto_desde: 501,
+      monto_hasta: 1000,
+      patron_autenticacion: "60d5ecb74e4e8d1b5cbf2458",
+      huellas_requeridas: 2,
+    },
+  ];
+
+  useEffect(() => {
+    loadRestrictions();
+  }, [accountId]);
+
+  // RestrictionsList.js
+  const loadRestrictions = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // OBTENER DATOS REALES DE RESTRICCIONES
+      const response = await accountService.getAccountRestrictions(accountId);
+
+      if (response.data && response.data.length > 0) {
+        // Usar restricciones reales del backend
+        setRestrictions(response.data);
+      } else {
+        setRestrictions([]);
+      }
+    } catch (error) {
+      console.error("Error cargando restricciones:", error);
+      setError("Error al cargar restricciones");
+      setRestrictions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRangeText = (desde, hasta) => {
+    if (desde === 0) return `Menores de $${hasta}`;
+    if (hasta === 1000) return `Mayores de $${desde}`;
+    return `De $${desde} hasta $${hasta}`;
+  };
+
+  const formatFingerprintsText = (count) => {
+    return count === 1
+      ? "1 huella dactilar requerida"
+      : `${count} huellas dactilares requeridas`;
+  };
+
+  const handleEdit = (restriction) => {
+    navigation.navigate("EditRestriction", {
+      restriction,
+      accountId,
+      onSave: loadRestrictions,
+    });
+  };
+
+  const handleCreate = () => {
+    navigation.navigate("CreateRestriction", {
+      accountId,
+      onSave: loadRestrictions,
+    });
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#5C2684" />
+        <Text>Cargando restricciones...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* Saludo "Hi, Ana!" con la fecha de hoy */}
         <Greeting name="Ana" />
 
-        {/* Título "Restricciones" con BackButton a la izquierda */}
         <View style={styles.titleContainer}>
-          <BackButton onPress={() => navigation.goBack()} /> {/* Botón de regresar */}
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.titleText}>Restricciones</Text>
         </View>
 
-        {/* Lista de restricciones */}
-        <View style={styles.row2}>
-          <Image
-            source={{
-              uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/36a6f0df-14ca-494a-858c-9b916e1ce5e5",
-            }}
-            resizeMode={"stretch"}
-            style={styles.image2}
-          />
-          <View style={styles.column2}>
-            <Text style={styles.text4}>Menores de $100</Text>
-            <Text style={styles.text5}>1 huella dactilar requerida</Text>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate("EditRestriction")}>
-            <Image
-              source={{ uri: "https://cdn-icons-png.flaticon.com/512/32/32213.png" }} // Ícono de flecha derecha
-              style={styles.arrowGo}
-            />
-          </TouchableOpacity>
-        </View>
+        )}
 
-        <View style={styles.row2}>
-          <Image
-            source={{
-              uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/676db8f7-a3ac-4846-8dbc-b837c6c2ca5c",
-            }}
-            resizeMode={"stretch"}
-            style={styles.image4}
-          />
-          <View style={styles.column2}>
-            <Text style={styles.text6}>De $101 hasta $500</Text>
-            <Text style={styles.text7}>2 huellas dactilares requeridas</Text>
+        {restrictions.map((restriction) => (
+          <View key={restriction._id} style={styles.row2}>
+            <Image
+              source={require("../assets/images/money.png")}
+              resizeMode={"stretch"}
+              style={styles.image2}
+            />
+            <View style={styles.column2}>
+              <Text style={styles.text4}>
+                {formatRangeText(
+                  restriction.monto_desde,
+                  restriction.monto_hasta
+                )}
+              </Text>
+              <Text style={styles.text5}>
+                {formatFingerprintsText(restriction.huellas_requeridas)}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => handleEdit(restriction)}>
+              <Image
+                source={{
+                  uri: "https://cdn-icons-png.flaticon.com/512/32/32213.png",
+                }}
+                style={styles.arrowGo}
+              />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate("EditRestriction")}>
-            <Image
-              source={{ uri: "https://cdn-icons-png.flaticon.com/512/32/32213.png" }} // Ícono de flecha derecha
-              style={styles.arrowGo}
-            />
-          </TouchableOpacity>
-        </View>
+        ))}
 
-        <View style={styles.row3}>
-          <Image
-            source={{
-              uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/0baf27db-cda6-4ff2-977d-68c43823aa60",
-            }}
-            resizeMode={"stretch"}
-            style={styles.image2}
-          />
-          <View style={styles.column2}>
-            <Text style={styles.text6}>De $501 hasta $1001</Text>
-            <Text style={styles.text7}>2 huellas dactilares requeridas</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("EditRestriction")}>
-            <Image
-              source={{ uri: "https://cdn-icons-png.flaticon.com/512/32/32213.png" }} // Ícono de flecha derecha
-              style={styles.arrowGo}
-            />
-          </TouchableOpacity>
-        </View>
-
-       
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate("CreateRestriction")}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={handleCreate}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Barra de navegación inferior */}
       <BottomNavBar />
     </SafeAreaView>
   );
