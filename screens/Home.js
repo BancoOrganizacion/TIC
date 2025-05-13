@@ -10,8 +10,9 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
-import { useNavigation} from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import BottomNavBar from "../components/BottomNavBar";
 import Greeting from "../components/Greeting";
 import AccountCard from "../components/AccountCard";
@@ -24,6 +25,7 @@ const AccountDashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
 
   // Load user data and accounts when the screen is focused
   useFocusEffect(
@@ -88,30 +90,14 @@ const AccountDashboard = () => {
       return;
     }
 
-    // Ask user to select account type
-    Alert.alert(
-      "Crear cuenta",
-      "Selecciona el tipo de cuenta que deseas crear:",
-      [
-        {
-          text: "Cuenta de ahorros",
-          onPress: () => createNewAccount("AHORROS"),
-        },
-        {
-          text: "Cuenta corriente",
-          onPress: () => createNewAccount("CORRIENTE"),
-        },
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-      ]
-    );
+    // Show custom account type selection modal instead of Alert
+    setShowAccountTypeModal(true);
   };
 
   const createNewAccount = async (accountType) => {
     try {
       setLoading(true);
+      setShowAccountTypeModal(false);
       await accountService.createAccount(accountType);
 
       // Refresh accounts list
@@ -179,8 +165,15 @@ const AccountDashboard = () => {
               </View>
             ) : (
               <View style={styles.noAccountsContainer}>
+                <Image
+                  source={require("../assets/images/empty-account.png")}
+                  style={styles.noAccountsImage}
+                />
                 <Text style={styles.noAccountsText}>
                   No tienes cuentas bancarias.
+                </Text>
+                <Text style={styles.noAccountsSubtext}>
+                  Crea tu primera cuenta para comenzar.
                 </Text>
               </View>
             )}
@@ -190,6 +183,10 @@ const AccountDashboard = () => {
                 style={styles.createAccountButton}
                 onPress={handleCreateAccount}
               >
+                <Image
+                  source={require("../assets/images/plus-circle.png")}
+                  style={styles.createAccountIcon}
+                />
                 <Text style={styles.createAccountText}>Crear nueva cuenta</Text>
               </TouchableOpacity>
             )}
@@ -211,6 +208,63 @@ const AccountDashboard = () => {
           </View>
         </ScrollView>
       )}
+
+      {/* Modal personalizado para selección de tipo de cuenta */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showAccountTypeModal}
+        onRequestClose={() => setShowAccountTypeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Crear cuenta</Text>
+            <Text style={styles.modalSubtitle}>
+              Selecciona el tipo de cuenta que deseas crear:
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.accountTypeButton}
+              onPress={() => createNewAccount("AHORROS")}
+            >
+              <Image
+                source={require("../assets/images/savings-icon.png")}
+                style={styles.accountTypeIcon}
+              />
+              <View style={styles.accountTypeInfo}>
+                <Text style={styles.accountTypeTitle}>Cuenta de ahorros</Text>
+                <Text style={styles.accountTypeDescription}>
+                  Ideal para guardar tu dinero y generar intereses
+                </Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.accountTypeButton}
+              onPress={() => createNewAccount("CORRIENTE")}
+            >
+              <Image
+                source={require("../assets/images/current-icon.png")}
+                style={styles.accountTypeIcon}
+              />
+              <View style={styles.accountTypeInfo}>
+                <Text style={styles.accountTypeTitle}>Cuenta corriente</Text>
+                <Text style={styles.accountTypeDescription}>
+                  Perfecta para tus transacciones diarias
+                </Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowAccountTypeModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <BottomNavBar />
     </SafeAreaView>
   );
@@ -226,7 +280,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 5,
+    paddingHorizontal: 20,
     paddingTop: 40,
   },
   greeting: {
@@ -238,6 +292,74 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#0062CC",
+  },
+  // Estilo mejorado para el mensaje cuando no hay cuentas
+  noAccountsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    marginTop: 50,
+    marginBottom: 40,
+  },
+  noAccountsImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  noAccountsText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1C1B1F",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  noAccountsSubtext: {
+    fontSize: 14,
+    color: "#75747E",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  // Estilo mejorado para el botón de crear cuenta
+  createAccountButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#5C2684",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    height: 60,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createAccountIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+    tintColor: "#FFFFFF",
+  },
+  createAccountText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  // Estilo para el botón de restricciones
   restrictionButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -257,7 +379,75 @@ const styles = StyleSheet.create({
   restrictionText: {
     color: "#1C1B1F",
     fontSize: 14,
+    fontWeight: "500",
+  },
+  // Estilos para el modal de selección de tipo de cuenta
+  modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1C1B1F",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#75747E",
+    marginBottom: 24,
+  },
+  accountTypeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F7FA",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  accountTypeIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 16,
+  },
+  accountTypeInfo: {
+    flex: 1,
+  },
+  accountTypeTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1C1B1F",
+    marginBottom: 4,
+  },
+  accountTypeDescription: {
+    fontSize: 12,
+    color: "#75747E",
+  },
+  cancelButton: {
+    alignItems: "center",
+    padding: 16,
+    marginTop: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#5C2684",
   },
 });
 

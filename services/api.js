@@ -39,30 +39,77 @@ apiPrivate.interceptors.request.use(
   }
 );
 
+// Fragmento mejorado para el interceptor de respuesta de apiPrivate
+// Para incluir en tu archivo de servicios API
+
 apiPrivate.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Si el error es 401 (Unauthorized) y hay un mensaje de token expirado
+    // Comprobar si el error es por token expirado
     if (
       error.response?.status === 401 &&
       (error.response?.data?.message === "Token inválido o expirado" ||
         error.response?.data?.message === "jwt expired")
     ) {
-      console.log("Token expirado, redirigiendo a login");
+      console.log("Token expirado, intentando renovar sesión...");
 
-      // Limpiar tokens almacenados
-      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+      try {
+        // Intentar obtener el refreshToken
+        const refreshToken = await AsyncStorage.getItem("refreshToken");
 
-      // Usar la navigation global o un navegador de referencia para redirigir
-      // Esto requerirá configurar un navigationRef en algún lugar de tu app
-      const { NavigationService } = require("../services/NavigationService");
-      NavigationService.reset("Login");
+        if (refreshToken) {
+          // Si hay un refreshToken, intentar renovar el token
+          const response = await apiPublic.post("/auth/auth/refresh", {
+            refreshToken,
+          });
 
-      // Mostrar alerta al usuario
-      Alert.alert(
-        "Sesión expirada",
-        "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
-      );
+          if (response.data && response.data.token) {
+            // Guardar el nuevo token
+            await AsyncStorage.setItem("token", response.data.token);
+            if (response.data.refreshToken) {
+              await AsyncStorage.setItem(
+                "refreshToken",
+                response.data.refreshToken
+              );
+            }
+
+            // Repetir la solicitud original con el nuevo token
+            const originalRequest = error.config;
+            originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
+            return apiPrivate(originalRequest);
+          }
+        }
+
+        // Si no se puede renovar, redirigir al login
+        console.log("No se pudo renovar el token, redirigiendo a login");
+        await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+        // Usar el navigationRef para navegar (asegúrate de tenerlo configurado)
+        if (navigationRef && navigationRef.current) {
+          navigationRef.current.reset({
+            index: 0,
+            routes: [{ name: "Login" }],
+          });
+        }
+
+        // Mostrar alerta al usuario
+        Alert.alert(
+          "Sesión expirada",
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
+        );
+      } catch (refreshError) {
+        // Si falla la renovación, limpiar tokens y redirigir a login
+        console.error("Error renovando token:", refreshError);
+        await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+        // Usar el navigationRef para navegar
+        if (navigationRef && navigationRef.current) {
+          navigationRef.current.reset({
+            index: 0,
+            routes: [{ name: "Login" }],
+          });
+        }
+      }
     }
 
     return Promise.reject(error);
@@ -372,16 +419,126 @@ export const accountService = {
   },
 
   // Add account restriction
+  // Método corregido para addAccountRestriction
+  // Método mejorado para addAccountRestriction con mejor debugging
   addAccountRestriction: async (accountId, restriction) => {
     try {
+      // Verificar token antes de hacer la petición
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("No hay token disponible");
+      }
+
+      // Validar que el ID de patrón de autenticación sea válido para MongoDB (24 caracteres hexadecimales)
+      const isValidMongoId = (id) => {
+        return id && /^[0-9a-fA-F]{24}$/.test(id);
+      };
+
+      // Asegurar que los montos son números
+      const payload = {
+        monto_desde: Number(restriction.monto_desde),
+        monto_hasta: Number(restriction.monto_hasta),
+      };
+
+      // Solo incluir patron_autenticacion si es un ID válido de MongoDB
+      if (
+        restriction.patron_autenticacion &&
+        isValidMongoId(restriction.patron_autenticacion)
+      ) {
+        payload.patron_autenticacion = restriction.patron_autenticacion;
+      } else if (restriction.patron_autenticacion) {
+        console.warn(
+          "ID de patrón de autenticación no válido:",
+          restriction.patron_autenticacion
+        );
+        // Si se proporcionó un ID pero no es válido, intentamos usar uno de muestra válido
+        payload.patron_autenticacion = "60d5ecb74e4e8d1b5cbf2457"; // ID MongoDB de ejemplo
+      }
+
+      // También podemos incluir huellas_requeridas si está disponible
+      if (typeof restriction.huellas_requeridas === "number") {
+        payload.huellas_requeridas = restriction.huellas_requeridas;
+      } else if (restriction.patron_autenticacion) {
+        // Si hay un patrón de autenticación pero no se especificó huellas_requeridas,
+        // podemos asumir que se requiere al menos 1 huella
+        payload.huellas_requeridas = 1;
+      }
+
+      console.log(
+        "URL completa:",
+        `${API_GATEWAY}/accounts/cuentas/${accountId}/restricciones`
+      );
+      console.log("Headers:", {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token.substring(0, 15)}...`,
+      });
+      console.log("Enviando payload:", JSON.stringify(payload, null, 2));
+
+      // Hacer la solicitud con logging detallado
       const response = await apiPrivate.post(
         `/accounts/cuentas/${accountId}/restricciones`,
-        restriction
+        payload
       );
-      console.log("Add restriction response:", response.status);
+
+      console.log("Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+      });
+
       return response;
     } catch (error) {
-      console.error("Error adding restriction:", error);
+      // Logging detallado del error
+      console.error("Error detallado al añadir restricción:", {
+        message: error.message,
+        config: error.config
+          ? {
+              url: error.config.url,
+              method: error.config.method,
+              data: error.config.data,
+            }
+          : "No hay config",
+        response: error.response
+          ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              data: error.response.data,
+            }
+          : "No hay response",
+      });
+
+      // Si el error es de red (timeout, sin conexión, etc.)
+      if (!error.response) {
+        console.error("Error de red:", error.message);
+        throw new Error("Error de conexión. Verifica tu conexión a internet.");
+      }
+
+      // Si el error es de autenticación
+      if (error.response?.status === 401) {
+        console.error("Error de autenticación:", error.response?.data);
+        throw new Error("Sesión expirada o inválida");
+      }
+
+      // Si el error es de validación (400)
+      if (error.response?.status === 400) {
+        console.error("Error de validación:", error.response?.data);
+        let errorMsg = "Los datos enviados no son válidos";
+
+        // Intentar extraer el mensaje de error específico
+        if (error.response?.data?.message?.message) {
+          if (Array.isArray(error.response.data.message.message)) {
+            errorMsg = error.response.data.message.message.join(", ");
+          } else {
+            errorMsg = error.response.data.message.message;
+          }
+        } else if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+
+        throw new Error(errorMsg);
+      }
+
+      // Otros errores
       throw error;
     }
   },

@@ -16,6 +16,7 @@ import ProfileScreen from "./screens/ProfileScreen";
 import TransactionHistory from "./screens/TransactionHistory";
 import UserProfile from "./screens/UserProfile";
 import EditProfile from "./screens/EditProfile";
+import FingerprintsList from "./screens/FingerprintsList";
 
 const Stack = createStackNavigator();
 
@@ -32,12 +33,10 @@ export default function App() {
         <Stack.Screen name="CreateRestriction" component={CreateRestriction} />
         <Stack.Screen name="EditRestriction" component={EditRestriction} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-        <Stack.Screen
-          name="TransactionHistory"
-          component={TransactionHistory}
-        />
+        <Stack.Screen name="TransactionHistory"component={TransactionHistory}/>
         <Stack.Screen name="UserProfile" component={UserProfile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="FingerprintsList" component={FingerprintsList} />
       </Stack.Navigator>
     </NavigationContainer>
   );

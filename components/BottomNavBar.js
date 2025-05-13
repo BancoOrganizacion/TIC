@@ -1,4 +1,3 @@
-// BottomNavBar.js (modificado para los nombres en inglés)
 import React from "react";
 import { View, TouchableOpacity, Image, Text, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";

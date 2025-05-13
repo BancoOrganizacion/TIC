@@ -118,13 +118,7 @@ const ProfileScreen = () => {
         {/* Profile Image */}
         <View style={styles.profileImageContainer}>
           <Image
-            source={
-              userData?.foto
-                ? { uri: userData.foto }
-                : {
-                    uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/dggsx94n.png",
-                  }
-            }
+            source={require("../assets/images/user.png")}
             style={styles.profileImage}
             resizeMode="contain"
           />
@@ -149,9 +143,7 @@ const ProfileScreen = () => {
             onPress={() => navigation.navigate("UserProfile")}
           >
             <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/EdAcYWzYdN/5k8uftb4.png",
-              }}
+              source={require("../assets/images/user.png")}
               style={styles.menuIcon}
               resizeMode="contain"
             />

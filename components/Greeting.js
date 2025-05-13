@@ -3,7 +3,6 @@ import { View, Image, Text, StyleSheet } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native'; 
 
-
 const Greeting = ({ style }) => {
   const [name, setName] = useState("");
   
@@ -72,20 +71,19 @@ const Greeting = ({ style }) => {
   );
 };
 
-export default Greeting; 
-
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: 24,
   },
   image: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
     marginRight: 12,
-    borderRadius: 12,
+    borderRadius: 18,
   },
   textContainer: {
     flex: 1,
@@ -98,7 +96,9 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     color: "#000000",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
   },
 });
+
+export default Greeting;

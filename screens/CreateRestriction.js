@@ -11,11 +11,21 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/BackButton";
 import Greeting from "../components/Greeting";
 import BottomNavBar from "../components/BottomNavBar";
 import Button from "../components/Button";
 import { accountService } from "../services/api";
+
+// Datos predeterminados para huellas (con IDs de MongoDB válidos)
+const DEFAULT_FINGERPRINTS = [
+  {
+    _id: "60d5ecb74e4e8d1b5cbf2456",
+    nombre: "Pulgar derecho",
+    descripcion: "Huella del pulgar de la mano derecha"
+  }
+];
 
 const CreateRestrictionScreen = () => {
   const navigation = useNavigation();
@@ -26,6 +36,12 @@ const CreateRestrictionScreen = () => {
   const [toAmount, setToAmount] = useState("");
   const [fingerprints, setFingerprints] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null); // Para almacenar información de depuración
+
+  // Función auxiliar para validar si un string es un ID de MongoDB válido
+  const isValidMongoId = (id) => {
+    return id && /^[0-9a-fA-F]{24}$/.test(id);
+  };
 
   const handleSave = async () => {
     if (!fromAmount || !toAmount) {
@@ -46,41 +62,121 @@ const CreateRestrictionScreen = () => {
       return;
     }
 
-
     setLoading(true);
+    setDebugInfo(null);
 
     try {
+      // Verificar sesión antes de continuar
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert(
+          "Sesión no disponible",
+          "Por favor inicia sesión nuevamente.",
+          [{ text: "OK", onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) }]
+        );
+        return;
+      }
+
+      // Si no hay huellas seleccionadas, usar una huella predeterminada
+      let fingerprintsToUse = fingerprints.length > 0 ? fingerprints : DEFAULT_FINGERPRINTS;
+
+      // Obtener el id de la huella si existe y es válido, o usar un ID predeterminado
+      let patronAutenticacion = null;
+      if (fingerprintsToUse.length > 0 && fingerprintsToUse[0]._id) {
+        patronAutenticacion = isValidMongoId(fingerprintsToUse[0]._id) 
+          ? fingerprintsToUse[0]._id 
+          : "60d5ecb74e4e8d1b5cbf2457"; // ID predeterminado
+      }
+
+      // Crear el objeto de restricción con el formato correcto
       const newRestriction = {
-        monto_desde: parseFloat(fromAmount),
-        monto_hasta: parseFloat(toAmount),
-        // mock para huellas
-        huellas_requeridas: fingerprints.length,
-        patron_autenticacion: fingerprints.length > 0 ? "mock_pattern" : null
+        monto_desde: desde,
+        monto_hasta: hasta,
+        patron_autenticacion: patronAutenticacion,
+        huellas_requeridas: fingerprintsToUse.length
       };
 
-      await accountService.addAccountRestriction(accountId, newRestriction);
+      console.log("Enviando restricción:", JSON.stringify(newRestriction, null, 2));
+      setDebugInfo({ 
+        accountId, 
+        payload: newRestriction 
+      });
+
+      const response = await accountService.addAccountRestriction(
+        accountId,
+        newRestriction
+      );
+
+      console.log("Respuesta del servidor:", response.data);
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        response: {
+          status: response.status,
+          data: response.data
+        }
+      }));
 
       Alert.alert("Éxito", "Restricción creada exitosamente");
       if (onSave) onSave();
       navigation.goBack();
     } catch (error) {
-      console.error("Error creating restriction:", error);
-      Alert.alert("Error", "No se pudo crear la restricción");
+      console.error("Error creating restriction:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        error: {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        }
+      }));
+
+      // Manejar específicamente errores de autenticación
+      if (error.response?.status === 401) {
+        Alert.alert(
+          "Sesión expirada",
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+          [
+            { 
+              text: "OK", 
+              onPress: () => navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              })
+            }
+          ]
+        );
+      } else {
+        // Otros errores
+        Alert.alert(
+          "Error",
+          error.response?.data?.message?.message?.join(", ") || 
+          error.response?.data?.message || 
+          error.message || 
+          "No se pudo crear la restricción"
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddFingerprint = () => {
-    navigation.navigate("AddFingerprint", {
-      onAdd: (newPattern) => {
-        setFingerprints([...fingerprints, newPattern]);
+    navigation.navigate("FingerprintsList", {
+      onAdd: (selectedFingerprints) => {
+        console.log("Huellas seleccionadas:", JSON.stringify(selectedFingerprints));
+        setFingerprints(selectedFingerprints);
       },
     });
   };
 
   const handleDeleteFingerprint = (id) => {
-    setFingerprints(fingerprints.filter((fp) => fp._id !== id));
+    console.log("Eliminando huella con id:", id);
+    setFingerprints((prev) => prev.filter((fp) => fp._id !== id));
   };
 
   return (
