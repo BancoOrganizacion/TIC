@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useFocusEffect } from "@react-navigation/native";
 import {
-  SafeAreaView,
   View,
-  ScrollView,
   Image,
   Text,
   StyleSheet,
@@ -13,13 +10,13 @@ import {
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import BottomNavBar from "../components/BottomNavBar";
-import Greeting from "../components/Greeting";
+import { useFocusEffect } from "@react-navigation/native";
+import AppLayout from "../components/AppLayout";
 import AccountCard from "../components/AccountCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { accountService, userService } from "../services/api";
 
-const AccountDashboard = () => {
+const Home = () => {
   const navigation = useNavigation();
   const [userProfile, setUserProfile] = useState(null);
   const [accounts, setAccounts] = useState([]);
@@ -52,10 +49,10 @@ const AccountDashboard = () => {
           // Actualizar estado
           setUserProfile(profileResponse.data);
           setAccounts(accountsResponse.data || []);
-          await AsyncStorage.multiSet([
-            ["userProfile", JSON.stringify(profileResponse.data)],
-            ["userAccounts", JSON.stringify(accountsResponse.data || [])]
-          ]);
+          
+          // Guardar datos en caché
+          await AsyncStorage.setItem("userProfile", JSON.stringify(profileResponse.data));
+          await AsyncStorage.setItem("userAccounts", JSON.stringify(accountsResponse.data || []));
           
         } catch (error) {
           console.error("Error loading data:", error);
@@ -66,18 +63,38 @@ const AccountDashboard = () => {
       };
 
       loadData();
-
-      const interval = setInterval(loadData, 10000);
-      return () => clearInterval(interval);
+      
+      // No es necesario un intervalo para recargar datos automáticamente,
+      // ya que useFocusEffect se activa cada vez que la pantalla recibe el foco
+      // y después de navegaciones (como crear una nueva cuenta o agregar restricciones)
+      
     }, [])
   );
 
   const handleRestrictionsPress = (accountId) => {
-    navigation.navigate("RestrictionsList", { accountId });
+    navigation.navigate("RestrictionsList", { 
+      accountId,
+      onSave: refreshAccounts // Agregamos callback para refrescar datos al regresar
+    });
   };
 
   const handleAccountPress = (accountId) => {
     navigation.navigate("TransactionHistory", { accountId });
+  };
+
+  // Función para refrescar solo las cuentas sin recargar el perfil
+  const refreshAccounts = async () => {
+    try {
+      setLoading(true);
+      const accountsResponse = await accountService.getMyAccounts();
+      setAccounts(accountsResponse.data || []);
+      await AsyncStorage.setItem("userAccounts", JSON.stringify(accountsResponse.data || []));
+    } catch (error) {
+      console.error("Error refreshing accounts:", error);
+      // No mostramos error al usuario en una actualización silenciosa
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateAccount = async () => {
@@ -101,8 +118,7 @@ const AccountDashboard = () => {
       await accountService.createAccount(accountType);
 
       // Refresh accounts list
-      const accountsResponse = await accountService.getMyAccounts();
-      setAccounts(accountsResponse.data || []);
+      await refreshAccounts();
 
       Alert.alert("Éxito", "Cuenta creada exitosamente");
     } catch (error) {
@@ -126,88 +142,93 @@ const AccountDashboard = () => {
       : "$0.00";
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {loading ? (
+  // Si está cargando, muestra un indicador de carga
+  if (loading) {
+    return (
+      <AppLayout showHeader={false}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0062CC" />
           <Text style={styles.loadingText}>Cargando datos...</Text>
         </View>
-      ) : (
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.content}>
-            <Greeting style={styles.greeting} />
+      </AppLayout>
+    );
+  }
 
-            {accounts.length > 0 ? (
-              <View style={styles.cardsContainer}>
-                {accounts.map((account, index) => (
-                  <TouchableOpacity
-                    key={account._id || index}
-                    onPress={() => handleAccountPress(account._id)}
-                  >
-                    <AccountCard
-                      accountNumber={formatAccountNumber(account.numero_cuenta)}
-                      accountName={
-                        userProfile
-                          ? `${userProfile.nombre || ""} ${userProfile.apellido || ""}`
-                          : "Usuario"
-                      }
-                      accountType={
-                        account.tipo_cuenta === "AHORROS"
-                          ? "Ahorros"
-                          : "Corriente"
-                      }
-                      balance={formatBalance(account.saldo)}
-                      style={styles.card}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.noAccountsContainer}>
-                <Image
-                  source={require("../assets/images/empty-account.png")}
-                  style={styles.noAccountsImage}
-                />
-                <Text style={styles.noAccountsText}>
-                  No tienes cuentas bancarias.
-                </Text>
-                <Text style={styles.noAccountsSubtext}>
-                  Crea tu primera cuenta para comenzar.
-                </Text>
-              </View>
-            )}
-
-            {accounts.length < 2 && (
+  // Contenido principal
+  return (
+    <AppLayout 
+      showHeader={false} 
+      scrollable={true}
+    >
+      <View style={styles.content}>
+        {accounts.length > 0 ? (
+          <View style={styles.cardsContainer}>
+            {accounts.map((account, index) => (
               <TouchableOpacity
-                style={styles.createAccountButton}
-                onPress={handleCreateAccount}
+                key={account._id || index}
+                onPress={() => handleAccountPress(account._id)}
               >
-                <Image
-                  source={require("../assets/images/plus-circle.png")}
-                  style={styles.createAccountIcon}
+                <AccountCard
+                  accountNumber={formatAccountNumber(account.numero_cuenta)}
+                  accountName={
+                    userProfile
+                      ? `${userProfile.nombre || ""} ${userProfile.apellido || ""}`
+                      : "Usuario"
+                  }
+                  accountType={
+                    account.tipo_cuenta === "AHORROS"
+                      ? "Ahorros"
+                      : "Corriente"
+                  }
+                  balance={formatBalance(account.monto_actual)}
+                  style={styles.card}
                 />
-                <Text style={styles.createAccountText}>Crear nueva cuenta</Text>
               </TouchableOpacity>
-            )}
-
-            {accounts.length > 0 && (
-              <TouchableOpacity
-                style={styles.restrictionButton}
-                onPress={() => handleRestrictionsPress(accounts[0]?._id)}
-              >
-                <Image
-                  source={require("../assets/images/fingerprint.png")}
-                  style={styles.restrictionIcon}
-                />
-                <Text style={styles.restrictionText}>
-                  Registrar restricciones
-                </Text>
-              </TouchableOpacity>
-            )}
+            ))}
           </View>
-        </ScrollView>
-      )}
+        ) : (
+          <View style={styles.noAccountsContainer}>
+            <Image
+              source={require("../assets/images/empty-account.png")}
+              style={styles.noAccountsImage}
+            />
+            <Text style={styles.noAccountsText}>
+              No tienes cuentas bancarias.
+            </Text>
+            <Text style={styles.noAccountsSubtext}>
+              Crea tu primera cuenta para comenzar.
+            </Text>
+          </View>
+        )}
+
+        {accounts.length < 2 && (
+          <TouchableOpacity
+            style={styles.createAccountButton}
+            onPress={handleCreateAccount}
+          >
+            <Image
+              source={require("../assets/images/plus-circle.png")}
+              style={styles.createAccountIcon}
+            />
+            <Text style={styles.createAccountText}>Crear nueva cuenta</Text>
+          </TouchableOpacity>
+        )}
+
+        {accounts.length > 0 && (
+          <TouchableOpacity
+            style={styles.restrictionButton}
+            onPress={() => handleRestrictionsPress(accounts[0]?._id)}
+          >
+            <Image
+              source={require("../assets/images/fingerprint.png")}
+              style={styles.restrictionIcon}
+            />
+            <Text style={styles.restrictionText}>
+              Registrar restricciones
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Modal personalizado para selección de tipo de cuenta */}
       <Modal
@@ -264,27 +285,13 @@ const AccountDashboard = () => {
           </View>
         </View>
       </Modal>
-
-      <BottomNavBar />
-    </SafeAreaView>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  greeting: {
-    marginBottom: 24,
+    paddingTop: 24,
   },
   cardsContainer: {
     marginBottom: 24,
@@ -451,4 +458,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AccountDashboard;
+export default Home;

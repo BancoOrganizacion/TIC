@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  SafeAreaView,
   View,
-  ScrollView,
-  Image,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from "react-native";
-import {useNavigation,useRoute } from "@react-navigation/native";
-import BottomNavBar from "../components/BottomNavBar"; // Asegúrate de importar el componente
-import Greeting from "../components/Greeting"; // Componente reutilizable para el saludo
-import BackButton from "../components/BackButton"; // Componente reutilizable para el botón de regresar
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { accountService } from "../services/api";
+import { AppLayout } from "../components";
 
 const RestrictionsList = () => {
   const navigation = useNavigation();
@@ -24,36 +20,10 @@ const RestrictionsList = () => {
   const [error, setError] = useState(null);
   const accountId = route.params?.accountId;
 
-  // Datos quemados para desarrollo
-  const mockRestrictions = [
-    {
-      _id: "1",
-      monto_desde: 0,
-      monto_hasta: 100,
-      patron_autenticacion: null,
-      huellas_requeridas: 1,
-    },
-    {
-      _id: "2",
-      monto_desde: 101,
-      monto_hasta: 500,
-      patron_autenticacion: "60d5ecb74e4e8d1b5cbf2457",
-      huellas_requeridas: 2,
-    },
-    {
-      _id: "3",
-      monto_desde: 501,
-      monto_hasta: 1000,
-      patron_autenticacion: "60d5ecb74e4e8d1b5cbf2458",
-      huellas_requeridas: 2,
-    },
-  ];
-
   useEffect(() => {
     loadRestrictions();
   }, [accountId]);
 
-  // RestrictionsList.js
   const loadRestrictions = async () => {
     setLoading(true);
     setError(null);
@@ -104,93 +74,117 @@ const RestrictionsList = () => {
     });
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  // Si está cargando
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#5C2684" />
-        <Text>Cargando restricciones...</Text>
-      </SafeAreaView>
+      <AppLayout 
+        title="Restricciones"
+        onBackPress={handleBackPress}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5C2684" />
+          <Text style={styles.loadingText}>Cargando restricciones...</Text>
+        </View>
+      </AppLayout>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Greeting name="Ana" />
-
-        <View style={styles.titleContainer}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <Text style={styles.titleText}>Restricciones</Text>
+    <AppLayout 
+      title="Restricciones"
+      onBackPress={handleBackPress}
+    >
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
+      )}
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {restrictions.map((restriction) => (
-          <View key={restriction._id} style={styles.row2}>
+      {/* Lista de restricciones */}
+      {restrictions.length === 0 && !error ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            No hay restricciones configuradas
+          </Text>
+        </View>
+      ) : (
+        restrictions.map((restriction) => (
+          <View key={restriction._id} style={styles.restrictionCard}>
             <Image
               source={require("../assets/images/money.png")}
-              resizeMode={"stretch"}
-              style={styles.image2}
+              resizeMode="contain"
+              style={styles.restrictionIcon}
             />
-            <View style={styles.column2}>
-              <Text style={styles.text4}>
+            <View style={styles.restrictionInfo}>
+              <Text style={styles.rangeText}>
                 {formatRangeText(
                   restriction.monto_desde,
                   restriction.monto_hasta
                 )}
               </Text>
-              <Text style={styles.text5}>
+              <Text style={styles.fingerprintsText}>
                 {formatFingerprintsText(restriction.huellas_requeridas)}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => handleEdit(restriction)}>
+            <TouchableOpacity 
+              onPress={() => handleEdit(restriction)}
+              style={styles.editButton}
+            >
               <Image
-                source={{
-                  uri: "https://cdn-icons-png.flaticon.com/512/32/32213.png",
-                }}
-                style={styles.arrowGo}
+                source={require("../assets/images/chevron-right.png")}
+                style={styles.arrowIcon}
               />
             </TouchableOpacity>
           </View>
-        ))}
+        ))
+      )}
 
-        <TouchableOpacity style={styles.addButton} onPress={handleCreate}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      <BottomNavBar />
-    </SafeAreaView>
+      {/* Botón flotante para añadir */}
+      <TouchableOpacity style={styles.addButton} onPress={handleCreate}>
+        <Text style={styles.addButtonText}>+</Text>
+      </TouchableOpacity>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 40, // Aumenta el espacio en la parte superior
-  },
-  titleContainer: {
-    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
   },
-  titleText: {
-    color: "#1C1B1F",
-    fontSize: 20,
-    fontWeight: "bold",
-    flex: 1,
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#737373",
+  },
+  errorContainer: {
+    backgroundColor: "#FFEBEE",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 14,
     textAlign: "center",
   },
-  row2: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: "#737373",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  restrictionCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -199,69 +193,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 17,
     paddingHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 16,
+    // Sombra sutil
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  row3: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#5C2684",
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 17,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  image2: {
+  restrictionIcon: {
     width: 33,
     height: 31,
     marginRight: 8,
   },
-  image4: {
-    width: 33,
-    height: 31,
-    marginRight: 2,
-  },
-  column2: {
+  restrictionInfo: {
     flex: 1,
     marginLeft: 10,
   },
-  text4: {
+  rangeText: {
     color: "#1C1B1F",
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "500",
     marginBottom: 5,
   },
-  text5: {
+  fingerprintsText: {
     color: "#53405B",
     fontSize: 12,
   },
-  text6: {
-    color: "#1C1B1F",
-    fontSize: 13,
-    marginBottom: 4,
+  editButton: {
+    padding: 8,
   },
-  text7: {
-    color: "#737373",
-    fontSize: 12,
-  },
-  arrowGo: {
+  arrowIcon: {
     width: 24,
     height: 24,
+    tintColor: "#5C2684",
   },
   addButton: {
     position: "absolute",
-    bottom: -250,
-    right: 5,
+    bottom: 20,
+    right: 20,
     width: 50,
     height: 50,
     borderRadius: 25,
     backgroundColor: "#5C2684",
     justifyContent: "center",
     alignItems: "center",
+    // Sombra para botón flotante
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   addButtonText: {
     color: "#FFFFFF",
     fontSize: 24,
+    fontWeight: "600",
   },
 });
 

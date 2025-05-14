@@ -2,22 +2,20 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
-  Image,
   Alert,
   ActivityIndicator,
   Linking,
   StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import BackButton from "../components/BackButton";
-import { userService, authService } from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { userService, authService } from "../services/api";
+import AppLayout from "../components/AppLayout";
+import FormField from "../components/FormField";
+import Button from "../components/Button";
 
-export default () => {
+const RegistrationScreen = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -34,12 +32,11 @@ export default () => {
 
   // El rol de usuario regular
   const ROL_USUARIO_ID = "67ec71573b2822762122e79a";
-  // Rol temporal para usuarios en proceso de verificación (debes crear este rol en tu backend)
+  // Rol temporal para usuarios en proceso de verificación
   const ROL_USUARIO_REGISTRADO_ID = "681144a24ea765b9fe82406f";
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
-    useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -141,82 +138,82 @@ export default () => {
     return true;
   };
 
-// Función de validación de contraseña mejorada
-const validatePassword = (value) => {
-  handleChange("password", value);
-  
-  // Si no hay valor
-  if (!value) {
-    setErrors({ ...errors, password: "La contraseña es requerida" });
-    return false;
-  }
-  
-  // Si no tiene al menos 8 caracteres
-  if (value.length < 8) {
-    setErrors({
-      ...errors,
-      password: "La contraseña debe tener al menos 8 caracteres",
-    });
-    return false;
-  }
-  
-  // Validar que tenga al menos una mayúscula
-  if (!/[A-Z]/.test(value)) {
-    setErrors({
-      ...errors,
-      password: "La contraseña debe contener al menos una letra mayúscula",
-    });
-    return false;
-  }
-  
-  // Validar que tenga al menos una minúscula
-  if (!/[a-z]/.test(value)) {
-    setErrors({
-      ...errors,
-      password: "La contraseña debe contener al menos una letra minúscula",
-    });
-    return false;
-  }
-  
-  // Validar que tenga al menos un número
-  if (!/\d/.test(value)) {
-    setErrors({
-      ...errors,
-      password: "La contraseña debe contener al menos un número",
-    });
-    return false;
-  }
-  
-  // Validar que tenga al menos un carácter especial
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) {
-    setErrors({
-      ...errors,
-      password: "La contraseña debe contener al menos un carácter especial",
-    });
-    return false;
-  }
-  
-  // Si cambia la contraseña, validar de nuevo la confirmación
-  if (formData.confirmPassword) {
-    validateConfirmPassword(formData.confirmPassword);
-  }
-  
-  return true;
-};
+  // Función de validación de contraseña mejorada
+  const validatePassword = (value) => {
+    handleChange("password", value);
+    
+    // Si no hay valor
+    if (!value) {
+      setErrors({ ...errors, password: "La contraseña es requerida" });
+      return false;
+    }
+    
+    // Si no tiene al menos 8 caracteres
+    if (value.length < 8) {
+      setErrors({
+        ...errors,
+        password: "La contraseña debe tener al menos 8 caracteres",
+      });
+      return false;
+    }
+    
+    // Validar que tenga al menos una mayúscula
+    if (!/[A-Z]/.test(value)) {
+      setErrors({
+        ...errors,
+        password: "La contraseña debe contener al menos una letra mayúscula",
+      });
+      return false;
+    }
+    
+    // Validar que tenga al menos una minúscula
+    if (!/[a-z]/.test(value)) {
+      setErrors({
+        ...errors,
+        password: "La contraseña debe contener al menos una letra minúscula",
+      });
+      return false;
+    }
+    
+    // Validar que tenga al menos un número
+    if (!/\d/.test(value)) {
+      setErrors({
+        ...errors,
+        password: "La contraseña debe contener al menos un número",
+      });
+      return false;
+    }
+    
+    // Validar que tenga al menos un carácter especial
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) {
+      setErrors({
+        ...errors,
+        password: "La contraseña debe contener al menos un carácter especial",
+      });
+      return false;
+    }
+    
+    // Si cambia la contraseña, validar de nuevo la confirmación
+    if (formData.confirmPassword) {
+      validateConfirmPassword(formData.confirmPassword);
+    }
+    
+    return true;
+  };
 
-const validateConfirmPassword = (value) => {
-  handleChange("confirmPassword", value);
-  if (!value) {
-    setErrors({ ...errors, confirmPassword: "Confirma tu contraseña" });
-    return false;
-  }
-  // Compara con el valor actualizado de password
-  if (formData.password !== value) {
-    setErrors({ ...errors, confirmPassword: "Las contraseñas no coinciden" });
-    return false;
-  }
-  return true;
-};
+  const validateConfirmPassword = (value) => {
+    handleChange("confirmPassword", value);
+    if (!value) {
+      setErrors({ ...errors, confirmPassword: "Confirma tu contraseña" });
+      return false;
+    }
+    // Compara con el valor actualizado de password
+    if (formData.password !== value) {
+      setErrors({ ...errors, confirmPassword: "Las contraseñas no coinciden" });
+      return false;
+    }
+    return true;
+  };
 
   const validateForm = () => {
     const isNombreValid = validateNombre(formData.nombre);
@@ -411,289 +408,117 @@ const validateConfirmPassword = (value) => {
       setIsLoading(false);
     }
   };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.headerContainer}>
-          <BackButton onPress={handleGoBack} />
-          <Text style={styles.title}>Registro</Text>
-        </View>
+    <AppLayout 
+      title="Registro" 
+      onBackPress={handleGoBack}
+      contentContainerStyle={styles.contentContainer}
+      showNavBar={false}  // No mostrar navbar en pantalla de registro
+      showGreeting={false} // No mostrar greeting en pantalla de registro
+    >
+      <FormField
+        label="Nombre*"
+        value={formData.nombre}
+        onChangeText={validateNombre}
+        placeholder="Ingresa tu nombre"
+        errorMessage={errors.nombre}
+      />
 
-        <Text style={styles.label}>Nombre*</Text>
-        <TextInput
-          placeholder="Ingresa tu nombre"
-          value={formData.nombre}
-          onChangeText={validateNombre}
-          style={styles.input}
-        />
-        {errors.nombre && <Text style={styles.errorText}>{errors.nombre}</Text>}
+      <FormField
+        label="Apellido*"
+        value={formData.apellido}
+        onChangeText={validateApellido}
+        placeholder="Ingresa tu apellido"
+        errorMessage={errors.apellido}
+      />
 
-        <Text style={styles.label}>Apellido*</Text>
-        <TextInput
-          placeholder="Ingresa tu apellido"
-          value={formData.apellido}
-          onChangeText={validateApellido}
-          style={styles.input}
-        />
-        {errors.apellido && (
-          <Text style={styles.errorText}>{errors.apellido}</Text>
-        )}
+      <FormField
+        label="Cédula*"
+        value={formData.cedula}
+        onChangeText={validateCedula}
+        placeholder="Ingresa tu cédula"
+        keyboardType="numeric"
+        maxLength={10}
+        errorMessage={errors.cedula}
+      />
 
-        <Text style={styles.label}>Cédula*</Text>
-        <TextInput
-          placeholder="Ingresa tu cédula"
-          value={formData.cedula}
-          onChangeText={validateCedula}
-          keyboardType="numeric"
-          maxLength={10}
-          style={styles.input}
-        />
-        {errors.cedula && <Text style={styles.errorText}>{errors.cedula}</Text>}
+      <FormField
+        label="Número de teléfono*"
+        value={formData.telefono}
+        onChangeText={validateTelefono}
+        placeholder="0999999999"
+        keyboardType="numeric"
+        errorMessage={errors.telefono}
+      />
 
-        <Text style={styles.label}>Número de teléfono*</Text>
-        <TextInput
-          placeholder="0999999999"
-          value={formData.telefono}
-          onChangeText={validateTelefono}
-          keyboardType="numeric"
-          style={styles.input}
-        />
-        {errors.telefono && (
-          <Text style={styles.errorText}>{errors.telefono}</Text>
-        )}
+      <FormField
+        label="Correo*"
+        value={formData.email}
+        onChangeText={validateEmail}
+        placeholder="name@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        errorMessage={errors.email}
+      />
 
-        <Text style={styles.label}>Correo*</Text>
-        <TextInput
-          placeholder="name@example.com"
-          value={formData.email}
-          onChangeText={validateEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+      <FormField
+        label="Nombre de usuario*"
+        value={formData.nombreUsuario}
+        onChangeText={validateNombreUsuario}
+        placeholder="Ingresa un nombre de usuario"
+        autoCapitalize="none"
+        errorMessage={errors.nombreUsuario}
+      />
 
-        <Text style={styles.label}>Nombre de usuario*</Text>
-        <TextInput
-          placeholder="Ingresa un nombre de usuario"
-          value={formData.nombreUsuario}
-          onChangeText={validateNombreUsuario}
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        {errors.nombreUsuario && (
-          <Text style={styles.errorText}>{errors.nombreUsuario}</Text>
-        )}
+      <FormField
+        label="Contraseña*"
+        value={formData.password}
+        onChangeText={validatePassword}
+        placeholder="Ingresa una contraseña"
+        errorMessage={errors.password}
+        isPassword={true}
+        isPasswordVisible={isPasswordVisible}
+        togglePasswordVisibility={() => setIsPasswordVisible(!isPasswordVisible)}
+      />
 
-        <Text style={styles.label}>Contraseña*</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            placeholder="Ingresa una contraseña"
-            value={formData.password}
-            onChangeText={validatePassword}
-            secureTextEntry={!isPasswordVisible}
-            style={styles.passwordInput}
-          />
-          <TouchableOpacity
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.eyeIconContainer}
-          >
-            <Image
-              source={
-                isPasswordVisible
-                  ? require("../assets/images/eye-visible.png")
-                  : require("../assets/images/eye-hidden.png")
-              }
-              style={styles.eyeIcon}
-            />
-          </TouchableOpacity>
-        </View>
-        {errors.password && (
-          <Text style={styles.errorText}>{errors.password}</Text>
-        )}
+      <FormField
+        label="Confirma tu contraseña*"
+        value={formData.confirmPassword}
+        onChangeText={validateConfirmPassword}
+        placeholder="Ingresa la contraseña otra vez"
+        errorMessage={errors.confirmPassword}
+        isPassword={true}
+        isPasswordVisible={isConfirmPasswordVisible}
+        togglePasswordVisibility={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+      />
 
-        <Text style={styles.label}>Confirma tu contraseña*</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            placeholder="Ingresa la contraseña otra vez"
-            value={formData.confirmPassword}
-            onChangeText={validateConfirmPassword}
-            secureTextEntry={!isConfirmPasswordVisible}
-            style={styles.passwordInput}
-          />
-          <TouchableOpacity
-            onPress={() =>
-              setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
-            }
-            style={styles.eyeIconContainer}
-          >
-            <Image
-              source={
-                isConfirmPasswordVisible
-                  ? require("../assets/images/eye-visible.png")
-                  : require("../assets/images/eye-hidden.png")
-              }
-              style={styles.eyeIcon}
-            />
-          </TouchableOpacity>
-        </View>
-        {errors.confirmPassword && (
-          <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-        )}
-
-        <TouchableOpacity
+      <View style={styles.buttonContainer}>
+        <Button
+          title={isLoading ? "Procesando..." : "Siguiente"}
           onPress={handleNext}
-          style={[styles.button, isLoading && styles.disabledButton]}
+          style={[isLoading && styles.disabledButton]}
           disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Siguiente</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        />
+      </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  contentContainer: {
+    paddingTop: 10,
+    paddingBottom: 40,
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    paddingTop: 20,
-  },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 30,
-    marginHorizontal: 20,
-  },
-  title: {
-    color: "#000000",
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    flex: 1,
-  },
-  label: {
-    color: "#737373",
-    fontSize: 15,
-    marginBottom: 8,
-    marginLeft: 25,
-  },
-  input: {
-    color: "#000000",
-    fontSize: 15,
-    marginBottom: 20,
-    marginHorizontal: 23,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-  },
-  phoneContainer: {
-    flexDirection: "row",
-    marginHorizontal: 23,
-    marginBottom: 20,
-  },
-  countryCodeInput: {
-    color: "#000000",
-    fontSize: 15,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-    width: "25%",
-    marginRight: 10,
-  },
-  phoneInput: {
-    color: "#000000",
-    fontSize: 15,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-    flex: 1,
-  },
-  button: {
-    marginHorizontal: 23,
-    backgroundColor: "#5C2684",
-    borderRadius: 7,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginBottom: 30,
+  buttonContainer: {
+    paddingHorizontal: 20,
     marginTop: 10,
+    marginBottom: 20,
   },
   disabledButton: {
     opacity: 0.7,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 23,
-    marginBottom: 20,
-    borderColor: "#D9D9D9",
-    borderRadius: 7,
-    borderWidth: 1,
-  },
-  passwordInput: {
-    color: "#000000",
-    fontSize: 15,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-    flex: 1,
-  },
-  eyeIconContainer: {
-    padding: 10,
-  },
-  eyeIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#737373",
-  },
-
-  errorText: {
-    color: "#FF3B30",
-    fontSize: 12,
-    marginLeft: 25,
-    marginTop: -15,
-    marginBottom: 15,
-    fontWeight: "500",
-  },
-
-  errorInput: {
-    borderColor: "#FF3B360",
-  },
-
-  validInput: {
-    borderColor: "#34C759",
-  },
-
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 25,
-    marginTop: -15,
-    marginBottom: 15,
-  },
-
-  errorIcon: {
-    width: 14,
-    height: 14,
-    marginRight: 5,
+    backgroundColor: "#9B59B6",
   },
 });
+
+export default RegistrationScreen;

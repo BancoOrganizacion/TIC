@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  SafeAreaView,
   View,
-  ScrollView,
   Text,
   Image,
   StyleSheet,
@@ -10,9 +8,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import BottomNavBar from "../components/BottomNavBar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { userService } from "../services/api";
+import AppLayout from "../components/AppLayout";
+import Button from "../components/Button";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -99,142 +98,137 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  // Si está cargando, mostrar indicador dentro del layout
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#5C2684" />
-      </SafeAreaView>
+      <AppLayout 
+        title="Perfil" 
+        showBack={true}
+        onBackPress={handleBackPress}
+        showGreeting={false} 
+        scrollable={false}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5C2684" />
+        </View>
+      </AppLayout>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Perfil</Text>
-        </View>
+    <AppLayout 
+      title="Perfil" 
+      showBack={true}
+      onBackPress={handleBackPress}
+      showGreeting={false}
+    >
+      {/* Profile Image */}
+      <View style={styles.profileImageContainer}>
+        <Image
+          source={require("../assets/images/user.png")}
+          style={styles.profileImage}
+          resizeMode="contain"
+        />
+      </View>
 
-        {/* Profile Image */}
-        <View style={styles.profileImageContainer}>
+      {/* User Name */}
+      <View style={styles.nameContainer}>
+        <Text style={styles.nameText}>
+          {userData?.nombre || "Nombre"} {userData?.apellido || "Apellido"}
+        </Text>
+        {userData?.nombre_usuario && (
+          <Text style={styles.usernameText}>@{userData.nombre_usuario}</Text>
+        )}
+      </View>
+
+      {/* Personal Info Section */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Información Personal</Text>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("UserProfile")}
+        >
           <Image
             source={require("../assets/images/user.png")}
-            style={styles.profileImage}
+            style={styles.menuIcon}
             resizeMode="contain"
           />
-        </View>
-
-        {/* User Name */}
-        <View style={styles.nameContainer}>
-          <Text style={styles.nameText}>
-            {userData?.nombre || "Nombre"} {userData?.apellido || "Apellido"}
-          </Text>
-          {userData?.nombre_usuario && (
-            <Text style={styles.usernameText}>@{userData.nombre_usuario}</Text>
-          )}
-        </View>
-
-        {/* Personal Info Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Información Personal</Text>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("UserProfile")}
-          >
-            <Image
-              source={require("../assets/images/user.png")}
-              style={styles.menuIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.menuText}>Tu perfil</Text>
-          </TouchableOpacity>
-
-          <View style={styles.separator} />
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("TransactionHistory")}
-          >
-            <Image
-              source={require("../assets/images/transaction.png")}
-              style={styles.menuIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.menuText}>Historial de transacciones</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.fullSeparator} />
-
-        {/* Security Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Seguridad</Text>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("BiometricPatterns")}
-          >
-            <Image
-              source={require("../assets/images/fingerprint.png")}
-              style={styles.menuIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.menuText}>Patrones</Text>
-          </TouchableOpacity>
-
-          <View style={styles.separator} />
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("RestrictionsList")}
-          >
-            <Image
-              source={require("../assets/images/restrictions.png")}
-              style={styles.menuIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.menuText}>Restricciones</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.fullSeparator} />
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+          <Text style={styles.menuText}>Tu perfil</Text>
         </TouchableOpacity>
 
-        {/* Space for BottomNavBar */}
-        <View style={styles.bottomNavSpacer} />
-      </ScrollView>
+        <View style={styles.separator} />
 
-      <BottomNavBar />
-    </SafeAreaView>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("TransactionHistory")}
+        >
+          <Image
+            source={require("../assets/images/transaction.png")}
+            style={styles.menuIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.menuText}>Historial de transacciones</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.fullSeparator} />
+
+      {/* Security Section */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Seguridad</Text>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("BiometricPatterns")}
+        >
+          <Image
+            source={require("../assets/images/fingerprint.png")}
+            style={styles.menuIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.menuText}>Patrones</Text>
+        </TouchableOpacity>
+
+        <View style={styles.separator} />
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("RestrictionsList")}
+        >
+          <Image
+            source={require("../assets/images/restrictions.png")}
+            style={styles.menuIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.menuText}>Restricciones</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.fullSeparator} />
+
+      {/* Logout Button */}
+      <View style={styles.buttonContainer}>
+        <Button
+          title="Cerrar sesión"
+          onPress={handleLogout}
+          style={styles.logoutButton}
+          textStyle={styles.logoutText}
+        />
+      </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
   loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: 20,
-    paddingBottom: 10,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1C1B1F",
   },
   profileImageContainer: {
     alignItems: "center",
@@ -294,19 +288,17 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     marginHorizontal: 20,
   },
-  logoutButton: {
-    alignItems: "center",
-    padding: 15,
-    marginHorizontal: 20,
+  buttonContainer: {
+    paddingHorizontal: 20,
     marginTop: 10,
   },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#5C2684",
+  logoutButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#5C2684",
   },
-  bottomNavSpacer: {
-    height: 80,
+  logoutText: {
+    color: "#5C2684",
   },
 });
 

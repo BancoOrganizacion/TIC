@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   View,
-  ScrollView,
   Text,
   TouchableOpacity,
   StyleSheet,
@@ -10,9 +8,7 @@ import {
   Alert
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import BackButton from "../components/BackButton";
-import Greeting from "../components/Greeting";
-import BottomNavBar from "../components/BottomNavBar";
+import AppLayout from "../components/AppLayout";
 
 const FingerprintsList = () => {
   const navigation = useNavigation();
@@ -83,45 +79,40 @@ const FingerprintsList = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Greeting name="Ana" />
-        
-        <View style={styles.titleContainer}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <Text style={styles.titleText}>Seleccionar Huellas</Text>
-        </View>
+    <AppLayout
+      title="Seleccionar Huellas"
+      onBackPress={() => navigation.goBack()}
+      showBack={true}
+    >
+      <Text style={styles.subtitle}>
+        Selecciona las huellas requeridas para esta restricción
+      </Text>
 
-        <Text style={styles.subtitle}>
-          Selecciona las huellas requeridas para esta restricción
-        </Text>
-
-        {fingerprints.map((fingerprint) => (
-          <TouchableOpacity
-            key={fingerprint.id}  // Usamos el id único aquí
-            style={[
-              styles.fingerprintItem,
-              fingerprint.selected && styles.selectedFingerprint
-            ]}
-            onPress={() => toggleFingerprint(fingerprint.id)}
-          >
+      {fingerprints.map((fingerprint) => (
+        <TouchableOpacity
+          key={fingerprint.id}  // Usamos el id único aquí
+          style={[
+            styles.fingerprintItem,
+            fingerprint.selected && styles.selectedFingerprint
+          ]}
+          onPress={() => toggleFingerprint(fingerprint.id)}
+        >
+          <Image
+            source={require("../assets/images/fingerprint.png")}
+            style={styles.fingerprintIcon}
+          />
+          <View style={styles.fingerprintInfo}>
+            <Text style={styles.fingerprintName}>{fingerprint.nombre}</Text>
+            <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
+          </View>
+          {fingerprint.selected && (
             <Image
-              source={require("../assets/images/fingerprint.png")}
-              style={styles.fingerprintIcon}
+              source={require("../assets/images/checkmark.png")}
+              style={styles.checkIcon}
             />
-            <View style={styles.fingerprintInfo}>
-              <Text style={styles.fingerprintName}>{fingerprint.nombre}</Text>
-              <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
-            </View>
-            {fingerprint.selected && (
-              <Image
-                source={require("../assets/images/checkmark.png")}
-                style={styles.checkIcon}
-              />
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+          )}
+        </TouchableOpacity>
+      ))}
 
       <TouchableOpacity 
         style={styles.confirmButton}
@@ -129,34 +120,11 @@ const FingerprintsList = () => {
       >
         <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
       </TouchableOpacity>
-
-      <BottomNavBar />
-    </SafeAreaView>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  titleText: {
-    color: "#1C1B1F",
-    fontSize: 20,
-    fontWeight: "bold",
-    flex: 1,
-    textAlign: "center",
-  },
   subtitle: {
     color: "#737373",
     fontSize: 14,
@@ -202,7 +170,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#5C2684",
     borderRadius: 8,
     padding: 16,
-    margin: 16,
+    marginTop: 24,
+    marginBottom: 80,
     alignItems: "center",
   },
   confirmButtonText: {
