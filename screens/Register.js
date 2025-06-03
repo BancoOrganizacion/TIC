@@ -31,7 +31,7 @@ const RegistrationScreen = () => {
   const navigation = useNavigation();
 
   // El rol de usuario regular
-  const ROL_USUARIO_ID = "67ec71573b2822762122e79a";
+  const ROL_USUARIO_ID = "681144a24ea765b9fe82406e";
   // Rol temporal para usuarios en proceso de verificación
   const ROL_USUARIO_REGISTRADO_ID = "681144a24ea765b9fe82406f";
 

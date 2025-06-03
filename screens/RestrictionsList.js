@@ -29,11 +29,9 @@ const RestrictionsList = () => {
     setError(null);
 
     try {
-      // OBTENER DATOS REALES DE RESTRICCIONES
       const response = await accountService.getAccountRestrictions(accountId);
 
       if (response.data && response.data.length > 0) {
-        // Usar restricciones reales del backend
         setRestrictions(response.data);
       } else {
         setRestrictions([]);
@@ -49,14 +47,16 @@ const RestrictionsList = () => {
 
   const formatRangeText = (desde, hasta) => {
     if (desde === 0) return `Menores de $${hasta}`;
-    if (hasta === 1000) return `Mayores de $${desde}`;
+    if (hasta === Number.MAX_SAFE_INTEGER || hasta >= 999999) return `Mayores de $${desde}`;
     return `De $${desde} hasta $${hasta}`;
   };
 
-  const formatFingerprintsText = (count) => {
-    return count === 1
-      ? "1 huella dactilar requerida"
-      : `${count} huellas dactilares requeridas`;
+  const formatFingerprintsText = (restriction) => {
+    // Verificar si tiene patrón de autenticación configurado
+    if (restriction.patron_autenticacion) {
+      return "Autenticación biométrica requerida";
+    }
+    return "Sin autenticación adicional";
   };
 
   const handleEdit = (restriction) => {
@@ -74,11 +74,34 @@ const RestrictionsList = () => {
     });
   };
 
+  const handleDelete = async (restrictionId) => {
+    Alert.alert(
+      "Confirmar eliminación",
+      "¿Estás seguro de que deseas eliminar esta restricción?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await accountService.removeAccountRestriction(accountId, restrictionId);
+              Alert.alert("Éxito", "Restricción eliminada correctamente");
+              loadRestrictions();
+            } catch (error) {
+              console.error("Error eliminando restricción:", error);
+              Alert.alert("Error", "No se pudo eliminar la restricción");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  // Si está cargando
   if (loading) {
     return (
       <AppLayout 
@@ -101,19 +124,34 @@ const RestrictionsList = () => {
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={loadRestrictions}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
         </View>
       )}
 
-      {/* Lista de restricciones */}
       {restrictions.length === 0 && !error ? (
         <View style={styles.emptyContainer}>
+          <Image
+            source={require("../assets/images/empty-state.png")}
+            style={styles.emptyImage}
+            defaultSource={require("../assets/images/money.png")}
+          />
           <Text style={styles.emptyText}>
             No hay restricciones configuradas
+          </Text>
+          <Text style={styles.emptySubtext}>
+            Agrega restricciones para controlar los montos de tus transacciones
           </Text>
         </View>
       ) : (
         restrictions.map((restriction) => (
-          <View key={restriction._id} style={styles.restrictionCard}>
+          <TouchableOpacity 
+            key={restriction._id} 
+            style={styles.restrictionCard}
+            onPress={() => handleEdit(restriction)}
+            onLongPress={() => handleDelete(restriction._id)}
+          >
             <Image
               source={require("../assets/images/money.png")}
               resizeMode="contain"
@@ -127,23 +165,27 @@ const RestrictionsList = () => {
                 )}
               </Text>
               <Text style={styles.fingerprintsText}>
-                {formatFingerprintsText(restriction.huellas_requeridas)}
+                {formatFingerprintsText(restriction)}
               </Text>
             </View>
-            <TouchableOpacity 
-              onPress={() => handleEdit(restriction)}
-              style={styles.editButton}
-            >
-              <Image
-                source={require("../assets/images/chevron-right.png")}
-                style={styles.arrowIcon}
-              />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.statusIndicator}>
+              {restriction.patron_autenticacion ? (
+                <Image
+                  source={require("../assets/images/fingerprint.png")}
+                  style={styles.fingerprintIndicator}
+                />
+              ) : (
+                <View style={styles.noAuthIndicator} />
+              )}
+            </View>
+            <Image
+              source={require("../assets/images/chevron-right.png")}
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
         ))
       )}
 
-      {/* Botón flotante para añadir */}
       <TouchableOpacity style={styles.addButton} onPress={handleCreate}>
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
@@ -167,11 +209,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
+    alignItems: "center",
   },
   errorText: {
     color: "#D32F2F",
     fontSize: 14,
     textAlign: "center",
+  },
+  retryText: {
+    color: "#5C2684",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 8,
   },
   emptyContainer: {
     flex: 1,
@@ -179,10 +228,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 40,
   },
+  emptyImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
   emptyText: {
-    color: "#737373",
+    color: "#1C1B1F",
     fontSize: 16,
+    fontWeight: "500",
     textAlign: "center",
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: "#737373",
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 32,
   },
   restrictionCard: {
     flexDirection: "row",
@@ -194,7 +257,6 @@ const styles = StyleSheet.create({
     paddingVertical: 17,
     paddingHorizontal: 16,
     marginBottom: 16,
-    // Sombra sutil
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -220,8 +282,17 @@ const styles = StyleSheet.create({
     color: "#53405B",
     fontSize: 12,
   },
-  editButton: {
-    padding: 8,
+  statusIndicator: {
+    marginRight: 8,
+  },
+  fingerprintIndicator: {
+    width: 20,
+    height: 20,
+    tintColor: "#5C2684",
+  },
+  noAuthIndicator: {
+    width: 20,
+    height: 20,
   },
   arrowIcon: {
     width: 24,
@@ -238,7 +309,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#5C2684",
     justifyContent: "center",
     alignItems: "center",
-    // Sombra para botón flotante
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,

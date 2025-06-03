@@ -1,5 +1,3 @@
-// components/index.js
-// Archivo para exportaciones de componentes UI
 
 // Componentes de Layout
 export { default as AppLayout } from './AppLayout';

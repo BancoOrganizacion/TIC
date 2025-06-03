@@ -8,7 +8,8 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BackButton from "../components/BackButton";
@@ -26,54 +27,82 @@ const EditRestrictionScreen = () => {
   const [toAmount, setToAmount] = useState(restriction.monto_hasta.toString());
   const [fingerprints, setFingerprints] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPatterns, setLoadingPatterns] = useState(true);
+  const [errors, setErrors] = useState({});
 
-  // Datos quemados de patrones de huellas
+  // Patrones de huellas quemados - coinciden con los de FingerprintsList
   const mockPatterns = [
-    { _id: "1", nombre: "Huella Derecha", descripcion: "Dedo índice derecho" },
-    { _id: "2", nombre: "Huella Izquierda", descripcion: "Dedo índice izquierdo" }
+    {
+      _id: "60d5ecb74e4e8d1b5cbf2456",
+      nombre: "Pulgar derecho",
+      descripcion: "Huella del pulgar de la mano derecha"
+    },
+    {
+      _id: "60d5ecb74e4e8d1b5cbf2457",
+      nombre: "Índice derecho",
+      descripcion: "Huella del dedo índice derecho"
+    },
+    {
+      _id: "60d5ecb74e4e8d1b5cbf2458",
+      nombre: "Pulgar izquierdo",
+      descripcion: "Huella del pulgar de la mano izquierda"
+    },
+    {
+      _id: "60d5ecb74e4e8d1b5cbf2459",
+      nombre: "Índice izquierdo",
+      descripcion: "Huella del dedo índice izquierdo"
+    }
   ];
 
   useEffect(() => {
-    loadFingerprintPatterns();
+    loadCurrentPattern();
   }, []);
 
-  const loadFingerprintPatterns = async () => {
+  const loadCurrentPattern = async () => {
+    setLoadingPatterns(true);
     try {
-      // DATOS QUEMADOS SOLO PARA HUELLAS
-      const mockPatterns = [
-        { 
-          _id: "1", 
-          nombre: "Huella Derecha", 
-          descripcion: "Dedo índice derecho",
-          imagen: require("../assets/images/fingerprint.png")
-        },
-        { 
-          _id: "2", 
-          nombre: "Huella Izquierda", 
-          descripcion: "Dedo índice izquierdo",
-          imagen: require("../assets/images/fingerprint.png")
+      // Si la restricción tiene un patrón de autenticación, buscarlo en los datos quemados
+      if (restriction.patron_autenticacion) {
+        const currentPattern = mockPatterns.find(
+          pattern => pattern._id === restriction.patron_autenticacion
+        );
+        
+        if (currentPattern) {
+          setFingerprints([currentPattern]);
         }
-      ];
-      
-      setFingerprints(mockPatterns);
-
+      }
     } catch (error) {
-      console.error("Error cargando patrones:", error);
-      // Usar datos quemados si hay error
-      setFingerprints(mockPatterns);
+      console.error("Error cargando patrón actual:", error);
+    } finally {
+      setLoadingPatterns(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!fromAmount || !toAmount) {
-      Alert.alert("Error", "Por favor completa todos los campos");
-      return;
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!fromAmount.trim()) {
+      newErrors.fromAmount = "El monto desde es requerido";
+    } else if (isNaN(parseFloat(fromAmount)) || parseFloat(fromAmount) < 0) {
+      newErrors.fromAmount = "Ingrese un valor numérico válido";
     }
-
+    
+    if (!toAmount.trim()) {
+      newErrors.toAmount = "El monto hasta es requerido";
+    } else if (isNaN(parseFloat(toAmount)) || parseFloat(toAmount) <= 0) {
+      newErrors.toAmount = "Ingrese un valor numérico válido";
+    }
+    
     if (parseFloat(fromAmount) >= parseFloat(toAmount)) {
-      Alert.alert("Error", "El monto 'Desde' debe ser menor que 'Hasta'");
-      return;
+      newErrors.toAmount = "El monto hasta debe ser mayor que el monto desde";
     }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
     
@@ -81,9 +110,15 @@ const EditRestrictionScreen = () => {
       const updatedData = {
         monto_desde: parseFloat(fromAmount),
         monto_hasta: parseFloat(toAmount),
-        // El backend debe manejar el patrón de huellas
-        patron_autenticacion: fingerprints.length > 0 ? "huella_requerida" : null
       };
+
+      // Solo incluir patron_autenticacion si hay huellas seleccionadas
+      if (fingerprints.length > 0 && fingerprints[0]._id) {
+        updatedData.patron_autenticacion = fingerprints[0]._id;
+      } else {
+        // Si no hay huellas, enviar null para eliminar el patrón existente
+        updatedData.patron_autenticacion = null;
+      }
       
       await accountService.updateAccountRestriction(
         accountId, 
@@ -91,27 +126,67 @@ const EditRestrictionScreen = () => {
         updatedData
       );
       
-      Alert.alert("Éxito", "Restricción actualizada");
-      if (onSave) onSave();
-      navigation.goBack();
+      Alert.alert(
+        "Éxito", 
+        "Restricción actualizada correctamente",
+        [{ text: "OK", onPress: () => {
+          if (onSave) onSave();
+          navigation.goBack();
+        }}]
+      );
     } catch (error) {
       console.error("Error guardando:", error);
-      Alert.alert("Error", "No se pudo actualizar la restricción");
+      
+      if (error.response?.status === 400 && error.response?.data?.message?.includes("rangos solapados")) {
+        Alert.alert(
+          "Error",
+          "Los rangos de monto se solapan con otra restricción existente."
+        );
+      } else {
+        Alert.alert(
+          "Error", 
+          error.response?.data?.message || "No se pudo actualizar la restricción"
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddFingerprint = () => {
-    navigation.navigate("AddFingerprint", {
-      patterns: fingerprints,
-      onAdd: (newPattern) => {
-        setFingerprints([...fingerprints, newPattern]);
+    navigation.navigate("FingerprintsList", {
+      selectedFingerprints: fingerprints,
+      onAdd: (selectedFingerprints) => {
+        setFingerprints(selectedFingerprints);
       }
     });
   };
 
   const handleDeleteFingerprint = (id) => {
-    setFingerprints(fingerprints.filter(fp => fp._id !== id));
+    Alert.alert(
+      "Eliminar autenticación",
+      "¿Estás seguro de que deseas eliminar esta autenticación biométrica?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Eliminar", 
+          style: "destructive",
+          onPress: () => setFingerprints(fingerprints.filter(fp => fp._id !== id))
+        }
+      ]
+    );
   };
+
+  if (loadingPatterns) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5C2684" />
+          <Text style={styles.loadingText}>Cargando datos...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,7 +201,10 @@ const EditRestrictionScreen = () => {
         <View style={styles.amountContainer}>
           <View style={styles.amountInputContainer}>
             <Text style={styles.label}>Desde</Text>
-            <View style={styles.inputRow}>
+            <View style={[
+              styles.inputRow,
+              errors.fromAmount ? styles.inputError : null
+            ]}>
               <Image
                 source={require("../assets/images/amount.png")}
                 resizeMode={"stretch"}
@@ -135,16 +213,27 @@ const EditRestrictionScreen = () => {
               <TextInput
                 placeholder="Monto desde"
                 value={fromAmount}
-                onChangeText={setFromAmount}
+                onChangeText={(text) => {
+                  setFromAmount(text);
+                  if (errors.fromAmount) {
+                    setErrors({...errors, fromAmount: null});
+                  }
+                }}
                 style={styles.input}
                 keyboardType="numeric"
               />
             </View>
+            {errors.fromAmount && (
+              <Text style={styles.errorText}>{errors.fromAmount}</Text>
+            )}
           </View>
 
           <View style={styles.amountInputContainer}>
             <Text style={styles.label}>Hasta</Text>
-            <View style={styles.inputRow}>
+            <View style={[
+              styles.inputRow,
+              errors.toAmount ? styles.inputError : null
+            ]}>
               <Image
                 source={require("../assets/images/amount.png")}
                 resizeMode={"stretch"}
@@ -153,58 +242,96 @@ const EditRestrictionScreen = () => {
               <TextInput
                 placeholder="Monto hasta"
                 value={toAmount}
-                onChangeText={setToAmount}
+                onChangeText={(text) => {
+                  setToAmount(text);
+                  if (errors.toAmount) {
+                    setErrors({...errors, toAmount: null});
+                  }
+                }}
                 style={styles.input}
                 keyboardType="numeric"
               />
             </View>
+            {errors.toAmount && (
+              <Text style={styles.errorText}>{errors.toAmount}</Text>
+            )}
           </View>
         </View>
 
         <View style={styles.fingerprintsContainer}>
-          <Text style={styles.sectionTitle}>
-            Huellas ({fingerprints.length} configuradas)
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              Autenticación biométrica
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              ({fingerprints.length} configurada{fingerprints.length !== 1 ? 's' : ''})
+            </Text>
+          </View>
 
-          {fingerprints.map((fingerprint, index) => (
-            <View key={fingerprint._id} style={styles.fingerprintRow}>
-              <Text style={styles.fingerprintNumber}>{index + 1}.</Text>
+          {fingerprints.length === 0 ? (
+            <View style={styles.noFingerprintsContainer}>
               <Image
                 source={require("../assets/images/fingerprint.png")}
-                resizeMode={"stretch"}
-                style={styles.fingerprintIcon}
+                style={styles.noFingerprintIcon}
               />
-              <View style={styles.fingerprintInfo}>
-                <Text style={styles.fingerprintText}>{fingerprint.nombre}</Text>
-                <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteFingerprint(fingerprint._id)}
-                style={styles.deleteButton}
+              <Text style={styles.noFingerprintsText}>
+                Sin autenticación adicional
+              </Text>
+              <TouchableOpacity 
+                style={styles.addPatternButton}
+                onPress={handleAddFingerprint}
               >
-                <Image
-                  source={require("../assets/images/delete.png")}
-                  resizeMode={"stretch"}
-                  style={styles.deleteIcon}
-                />
+                <Text style={styles.addPatternButtonText}>
+                  Agregar autenticación
+                </Text>
               </TouchableOpacity>
             </View>
-          ))}
+          ) : (
+            fingerprints.map((fingerprint, index) => (
+              <View key={fingerprint._id} style={styles.fingerprintRow}>
+                <Text style={styles.fingerprintNumber}>{index + 1}.</Text>
+                <Image
+                  source={require("../assets/images/fingerprint.png")}
+                  resizeMode={"stretch"}
+                  style={styles.fingerprintIcon}
+                />
+                <View style={styles.fingerprintInfo}>
+                  <Text style={styles.fingerprintText}>{fingerprint.nombre}</Text>
+                  <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteFingerprint(fingerprint._id)}
+                  style={styles.deleteButton}
+                >
+                  <Image
+                    source={require("../assets/images/delete.png")}
+                    resizeMode={"stretch"}
+                    style={styles.deleteIcon}
+                  />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
       <View style={styles.saveButtonContainer}>
         <Button
-          title={loading ? "Guardando..." : "Guardar restricción"}
+          title={loading ? "Guardando..." : "Guardar cambios"}
           onPress={handleSave}
           style={styles.saveButton}
           disabled={loading}
         />
       </View>
 
-      <TouchableOpacity style={styles.addButton} onPress={handleAddFingerprint}>
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {fingerprints.length > 0 && (
+        <TouchableOpacity 
+          style={styles.addButton} 
+          onPress={handleAddFingerprint}
+        >
+          <Text style={styles.addButtonText}>✎</Text>
+        </TouchableOpacity>
+      )}
 
       <BottomNavBar />
     </SafeAreaView>
@@ -220,6 +347,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    color: "#737373",
+    fontSize: 16,
   },
   titleContainer: {
     flexDirection: "row",
@@ -245,6 +382,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     fontSize: 14,
     marginBottom: 8,
+    fontWeight: "500",
   },
   inputRow: {
     flexDirection: "row",
@@ -254,6 +392,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 6,
+    backgroundColor: "#FAFAFA",
+  },
+  inputError: {
+    borderColor: "#D32F2F",
+    backgroundColor: "#FFF5F5",
   },
   icon: {
     width: 24,
@@ -262,25 +405,75 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#737373",
+    color: "#000000",
     fontSize: 15,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 12,
+    marginTop: 4,
   },
   fingerprintsContainer: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 16,
+  },
   sectionTitle: {
+    color: "#1C1B1F",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  sectionSubtitle: {
     color: "#737373",
     fontSize: 14,
-    marginBottom: 16,
+    marginLeft: 8,
+  },
+  noFingerprintsContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
+    borderStyle: "dashed",
+  },
+  noFingerprintIcon: {
+    width: 40,
+    height: 40,
+    opacity: 0.3,
+    marginBottom: 12,
+  },
+  noFingerprintsText: {
+    color: "#737373",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  addPatternButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F5F5F5",
+  },
+  addPatternButtonText: {
+    color: "#5C2684",
+    fontSize: 13,
+    fontWeight: "500",
   },
   fingerprintRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    backgroundColor: "#F8F8F8",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
   },
   fingerprintNumber: {
-    color: "#000000",
-    fontSize: 17,
+    color: "#5C2684",
+    fontSize: 16,
+    fontWeight: "500",
     marginRight: 8,
   },
   fingerprintIcon: {
@@ -288,10 +481,19 @@ const styles = StyleSheet.create({
     height: 40,
     marginRight: 8,
   },
-  fingerprintText: {
-    color: "#737373",
-    fontSize: 14,
+  fingerprintInfo: {
     flex: 1,
+    marginLeft: 8,
+  },
+  fingerprintText: {
+    color: "#000000",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  fingerprintDesc: {
+    color: "#737373",
+    fontSize: 12,
+    marginTop: 2,
   },
   deleteButton: {
     padding: 8,
@@ -299,21 +501,28 @@ const styles = StyleSheet.create({
   deleteIcon: {
     width: 21,
     height: 25,
+    tintColor: "#D32F2F",
   },
   addButton: {
     position: "absolute",
-    bottom: 160, // Ajusta la posición vertical
-    right: 20, // Ajusta la posición horizontal
+    bottom: 160,
+    right: 20,
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#5C2684",
+    backgroundColor: "#8E24AA",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   addButtonText: {
     color: "#FFFFFF",
     fontSize: 24,
+    fontWeight: "bold",
   },
   saveButtonContainer: {
     paddingHorizontal: 16,
@@ -321,16 +530,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     width: "100%",
-  },
-  errorContainer: {
-    backgroundColor: "#FFEBEE",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: "#D32F2F",
-    textAlign: "center",
   },
 });
 
