@@ -16,7 +16,6 @@ const Greeting = ({ style }) => {
   
   const loadUserName = async () => {
     try {
-      // Obtener directamente del userProfile que es la fuente de verdad
       const storedProfile = await AsyncStorage.getItem('userProfile');
       if (storedProfile) {
         try {
@@ -30,14 +29,12 @@ const Greeting = ({ style }) => {
         }
       }
       
-      // Si no hay perfil guardado, intentar con nombreReal como respaldo
       const nombreReal = await AsyncStorage.getItem('nombreReal');
       if (nombreReal) {
         setName(nombreReal);
         return;
       }
       
-      // Usar un nombre por defecto si no hay datos
       setName("Usuario");
     } catch (error) {
       console.error('Error loading user name:', error);
@@ -45,7 +42,6 @@ const Greeting = ({ style }) => {
     }
   };
   
-  // Cargar cuando el componente se monta
   useEffect(() => {
     loadUserName();
   }, []);
@@ -53,7 +49,7 @@ const Greeting = ({ style }) => {
   useFocusEffect(
     React.useCallback(() => {
       loadUserName();
-      return () => {}; // Cleanup function
+      return () => {}; 
     }, [])
   );
   

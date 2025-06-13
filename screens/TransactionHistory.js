@@ -85,13 +85,12 @@ const TransactionHistory = () => {
         // Usar la primera cuenta por defecto
         const firstAccount = response.data[0];
         console.log("Cuenta predeterminada encontrada:", firstAccount._id);
-        
-        setAccountData({
+          setAccountData({
           id: firstAccount._id,
           accountNumber: firstAccount.numero_cuenta || "Sin número",
           accountName: "Cuenta Principal",
           accountType: firstAccount.tipo_cuenta === "CORRIENTE" ? "Corriente" : "Ahorros",
-          balance: formatCurrency(firstAccount.monto_actual || 0)
+          balance: `$${parseFloat(firstAccount.monto_actual || 0).toFixed(2)}`
         });
         
         // Cargar transacciones de la cuenta predeterminada
@@ -120,13 +119,12 @@ const TransactionHistory = () => {
       const matchingAccount = accounts.find(acc => acc._id === accountId);
       
       if (matchingAccount) {
-        console.log("Cuenta encontrada:", matchingAccount._id);
-        setAccountData({
+        console.log("Cuenta encontrada:", matchingAccount._id);        setAccountData({
           id: matchingAccount._id,
           accountNumber: matchingAccount.numero_cuenta || "Sin número",
           accountName: "Cuenta Principal",
           accountType: matchingAccount.tipo_cuenta === "CORRIENTE" ? "Corriente" : "Ahorros",
-          balance: formatCurrency(matchingAccount.monto_actual || 0)
+          balance: `$${parseFloat(matchingAccount.monto_actual || 0).toFixed(2)}`
         });
         
         // Cargar transacciones para la cuenta encontrada
@@ -305,12 +303,11 @@ const TransactionHistory = () => {
       if (monto < 0) {
         isIncome = false;
       }
-      
-      const processedTransaction = {
+        const processedTransaction = {
         id,
         name: getTransactionName(transaction, tipo),
         date: formatDate(fecha),
-        amount: formatCurrency(Math.abs(monto), !isIncome), // Usar valor absoluto y manejar el signo en formatCurrency
+        amount: `${!isIncome ? "-" : ""}$${parseFloat(Math.abs(monto)).toFixed(2)}`,
         isIncome,
         type: tipo,
         originalData: transaction
@@ -409,16 +406,7 @@ const TransactionHistory = () => {
       return momentDate.format('DD MMM, YYYY');
     } catch (error) {
       console.error("Error formateando fecha:", error, dateString);
-      return "Fecha no disponible";
-    }
-  };
-
-  const formatCurrency = (amount, isNegative = false) => {
-    if (amount === undefined || amount === null) return "$0.00";
-    
-    // Si es un débito, asegurarse de que aparezca como negativo para visualización
-    const sign = isNegative ? "-" : "+";
-    return `${sign}$${parseFloat(Math.abs(amount)).toFixed(2)}`;
+      return "Fecha no disponible";    }
   };
 
   const handleRefresh = () => {

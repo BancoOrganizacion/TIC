@@ -67,7 +67,7 @@ const BottomNavBar = () => {
           <Text style={getTextStyle("ProfileScreen")}>Perfil</Text>
         </TouchableOpacity>
       </View>
-      {/* Espacio adicional para evitar que el contenido quede detrás de la barra de navegación en iOS */}
+      
       <View style={styles.bottomSafeArea} />
     </View>
   );
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   bottomSafeArea: {
-    height: 24, // Ajusta según sea necesario para diferentes dispositivos
+    height: 24,
   }
 });
 

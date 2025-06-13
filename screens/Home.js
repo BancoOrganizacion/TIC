@@ -24,7 +24,6 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
 
-  // Load user data and accounts when the screen is focused
   useFocusEffect(
     React.useCallback(() => {
       const loadData = async () => {
@@ -64,17 +63,13 @@ const Home = () => {
 
       loadData();
       
-      // No es necesario un intervalo para recargar datos automáticamente,
-      // ya que useFocusEffect se activa cada vez que la pantalla recibe el foco
-      // y después de navegaciones (como crear una nueva cuenta o agregar restricciones)
-      
     }, [])
   );
 
   const handleRestrictionsPress = (accountId) => {
     navigation.navigate("RestrictionsList", { 
       accountId,
-      onSave: refreshAccounts // Agregamos callback para refrescar datos al regresar
+      onSave: refreshAccounts
     });
   };
 
@@ -82,7 +77,6 @@ const Home = () => {
     navigation.navigate("TransactionHistory", { accountId });
   };
 
-  // Función para refrescar solo las cuentas sin recargar el perfil
   const refreshAccounts = async () => {
     try {
       setLoading(true);
@@ -91,14 +85,12 @@ const Home = () => {
       await AsyncStorage.setItem("userAccounts", JSON.stringify(accountsResponse.data || []));
     } catch (error) {
       console.error("Error refreshing accounts:", error);
-      // No mostramos error al usuario en una actualización silenciosa
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateAccount = async () => {
-    // Check if user already has 2 accounts
     if (accounts.length >= 2) {
       Alert.alert(
         "Límite alcanzado",
@@ -107,7 +99,6 @@ const Home = () => {
       return;
     }
 
-    // Show custom account type selection modal instead of Alert
     setShowAccountTypeModal(true);
   };
 
@@ -132,6 +123,39 @@ const Home = () => {
     }
   };
 
+  // Función para manejar la eliminación de una cuenta
+  const handleDeleteAccount = async (accountNumber) => {
+    try {
+      setLoading(true);
+      
+      // Buscar la cuenta por número
+      const accountToDelete = accounts.find(acc => 
+        formatAccountNumber(acc.numero_cuenta) === accountNumber
+      );
+      
+      if (!accountToDelete) {
+        Alert.alert("Error", "No se encontró la cuenta para eliminar");
+        return;
+      }
+
+      // Llamar al servicio para eliminar la cuenta
+      await accountService.cancelAccount(accountToDelete._id);
+      
+      // Refrescar la lista de cuentas
+      await refreshAccounts();
+      
+      Alert.alert("Éxito", "Cuenta eliminada correctamente");
+    } catch (error) {
+      console.error("Error eliminando cuenta:", error);
+      Alert.alert(
+        "Error", 
+        error.response?.data?.message || "No se pudo eliminar la cuenta. Por favor, inténtalo de nuevo."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatAccountNumber = (number) => {
     return number ? `${number}`.padStart(10, "0") : "";
   };
@@ -142,7 +166,6 @@ const Home = () => {
       : "$0.00";
   };
 
-  // Si está cargando, muestra un indicador de carga
   if (loading) {
     return (
       <AppLayout showHeader={false}>
@@ -154,7 +177,6 @@ const Home = () => {
     );
   }
 
-  // Contenido principal
   return (
     <AppLayout 
       showHeader={false} 
@@ -162,8 +184,7 @@ const Home = () => {
     >
       <View style={styles.content}>
         {accounts.length > 0 ? (
-          <View style={styles.cardsContainer}>
-            {accounts.map((account, index) => (
+          <View style={styles.cardsContainer}>            {accounts.map((account, index) => (
               <TouchableOpacity
                 key={account._id || index}
                 onPress={() => handleAccountPress(account._id)}
@@ -181,6 +202,7 @@ const Home = () => {
                       : "Corriente"
                   }
                   balance={formatBalance(account.monto_actual)}
+                  onDeleteAccount={handleDeleteAccount}
                   style={styles.card}
                 />
               </TouchableOpacity>
@@ -230,7 +252,6 @@ const Home = () => {
         )}
       </View>
 
-      {/* Modal personalizado para selección de tipo de cuenta */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -309,7 +330,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#0062CC",
   },
-  // Estilo mejorado para el mensaje cuando no hay cuentas
   noAccountsContainer: {
     flex: 1,
     justifyContent: "center",
@@ -336,7 +356,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
-  // Estilo mejorado para el botón de crear cuenta
   createAccountButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -366,7 +385,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  // Estilo para el botón de restricciones
   restrictionButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -388,7 +406,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  // Estilos para el modal de selección de tipo de cuenta
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",

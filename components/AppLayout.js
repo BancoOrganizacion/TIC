@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   scrollContent: {
-    paddingBottom: 100, // Para evitar que el contenido quede debajo del NavBar
+    paddingBottom: 100, 
   },
   contentWithNavBar: {
-    marginBottom: 60, // Altura del NavBar
+    marginBottom: 60, 
   },
 });
 

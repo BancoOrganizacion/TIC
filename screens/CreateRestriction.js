@@ -29,55 +29,83 @@ const CreateRestrictionScreen = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!fromAmount.trim()) {
       newErrors.fromAmount = "El monto desde es requerido";
     } else if (isNaN(parseFloat(fromAmount)) || parseFloat(fromAmount) < 0) {
       newErrors.fromAmount = "Ingrese un valor numérico válido";
     }
-    
+
     if (!toAmount.trim()) {
       newErrors.toAmount = "El monto hasta es requerido";
     } else if (isNaN(parseFloat(toAmount)) || parseFloat(toAmount) <= 0) {
       newErrors.toAmount = "Ingrese un valor numérico válido";
     }
-    
+
     if (parseFloat(fromAmount) >= parseFloat(toAmount)) {
       newErrors.toAmount = "El monto hasta debe ser mayor que el monto desde";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const createBiometricPattern = async (selectedFingerprints) => {
-    try {
-      console.log("Creating biometric pattern with fingerprints:", selectedFingerprints.map(fp => fp._id));
-      
-      if (!selectedFingerprints || selectedFingerprints.length === 0) {
-        throw new Error("No hay huellas seleccionadas para crear el patrón");
-      }
-
-      // Extraer los IDs de las huellas seleccionadas
-      const fingerprintIds = selectedFingerprints.map(fp => fp._id);
-      
-      // Validar que todos los IDs sean válidos
-      const invalidIds = fingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
-      if (invalidIds.length > 0) {
-        throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
-      }
-
-      // Crear el patrón usando el servicio biométrico
-      const response = await biometricService.createPattern(fingerprintIds);
-      
-      console.log("Pattern created successfully:", response.data);
-      
-      return response.data._id || response.data.id;
-    } catch (error) {
-      console.error("Error creating biometric pattern:", error);
-      throw error;
+const createBiometricPattern = async (selectedFingerprints) => {
+  try {
+    console.log("Creating biometric pattern with fingerprints:", selectedFingerprints.map(fp => fp._id));
+    
+    if (!selectedFingerprints || selectedFingerprints.length === 0) {
+      throw new Error("No hay huellas seleccionadas para crear el patrón");
     }
-  };
+
+    // Extraer los IDs de las huellas seleccionadas (DedoRegistrado IDs)
+    const fingerprintIds = selectedFingerprints.map(fp => fp._id);
+    
+    // Validar que todos los IDs sean válidos
+    const invalidIds = fingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
+    if (invalidIds.length > 0) {
+      throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
+    }
+
+    console.log("Sending fingerprint IDs to create pattern:", fingerprintIds);
+    const response = await biometricService.createPattern(fingerprintIds);
+    
+    console.log("Pattern created successfully:", response.data);
+    
+    // El patrón creado puede venir en diferentes estructuras
+    let patternId = null;
+    
+    if (response.data) {
+      patternId = response.data._id || 
+                  response.data.id || 
+                  response.data.patron_id ||
+                  response.data.patronId ||
+                  (typeof response.data === 'string' ? response.data : null);
+      
+      console.log("Pattern response structure:", {
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        keys: typeof response.data === 'object' ? Object.keys(response.data) : [],
+        extractedId: patternId
+      });
+    }
+
+    if (!patternId) {
+      console.error("No se pudo obtener el ID del patrón creado:", {
+        response: response.data,
+        status: response.status,
+        statusText: response.statusText
+      });
+      throw new Error("Error: No se recibió el ID del patrón creado");
+    }
+
+    console.log("Pattern ID extracted successfully:", patternId);
+    return patternId;
+  } catch (error) {
+    console.error("Error creating biometric pattern:", error);
+    throw error;
+  }
+};
 
   const handleSave = async () => {
     if (!validateForm()) return;
@@ -95,7 +123,6 @@ const CreateRestrictionScreen = () => {
         return;
       }
 
-      // Crear el objeto de restricción base
       const newRestriction = {
         monto_desde: parseFloat(fromAmount),
         monto_hasta: parseFloat(toAmount),
@@ -103,25 +130,48 @@ const CreateRestrictionScreen = () => {
 
       let patternId = null;
 
-      // Si hay huellas seleccionadas, crear un patrón biométrico
       if (fingerprints.length > 0) {
         try {
           setCreatingPattern(true);
           console.log("Creating pattern for restriction...");
-          
+
           patternId = await createBiometricPattern(fingerprints);
-          
           if (patternId) {
-            newRestriction.patron_autenticacion = patternId;
-            console.log("Pattern created with ID:", patternId);
-          }
-        } catch (patternError) {
+            try {
+              console.log("Getting pattern details for UI update...");
+              const patternDetails = await biometricService.getPatternDetails(patternId);
+
+              newRestriction.patron_autenticacion = patternId;
+              console.log("Pattern created with details:", patternDetails.data);
+
+            } catch (detailsError) {
+              console.warn("Could not get pattern details, but pattern was created:", detailsError);
+              newRestriction.patron_autenticacion = patternId;
+            }
+          }        } catch (patternError) {
           console.error("Error creating pattern:", patternError);
+
+          let errorMessage = "No se pudo crear el patrón biométrico.";
           
-          // Mostrar error específico del patrón
+          if (patternError.message) {
+            if (patternError.message.includes("Se requiere al menos una huella")) {
+              errorMessage = "Debes seleccionar al menos una huella para crear el patrón.";
+            } else if (patternError.message.includes("Datos inválidos")) {
+              errorMessage = "Las huellas seleccionadas no son válidas. Intenta nuevamente.";
+            } else if (patternError.message.includes("No autorizado")) {
+              errorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
+            } else if (patternError.message.includes("Error interno del servidor")) {
+              errorMessage = "Error del servidor. Intenta nuevamente más tarde.";
+            } else if (patternError.message.includes("conexión")) {
+              errorMessage = "Error de conexión. Verifica tu internet e intenta nuevamente.";
+            } else {
+              errorMessage = `Error: ${patternError.message}`;
+            }
+          }
+
           Alert.alert(
-            "Error al crear patrón",
-            `No se pudo crear el patrón biométrico: ${patternError.message}. ¿Deseas crear la restricción sin autenticación biométrica?`,
+            "Error al crear patrón biométrico",
+            `${errorMessage}\n\n¿Deseas crear la restricción sin autenticación biométrica?`,
             [
               {
                 text: "Cancelar",
@@ -130,7 +180,7 @@ const CreateRestrictionScreen = () => {
               },
               {
                 text: "Continuar sin biometría",
-                onPress: () => proceedWithoutBiometrics()
+                onPress: () => proceedWithRestriction(newRestriction)
               }
             ]
           );
@@ -140,41 +190,42 @@ const CreateRestrictionScreen = () => {
         }
       }
 
-      const proceedWithoutBiometrics = async () => {
-        try {
-          console.log("Saving restriction:", JSON.stringify(newRestriction, null, 2));
-
-          const response = await accountService.addAccountRestriction(
-            accountId,
-            newRestriction
-          );
-
-          console.log("Restriction saved successfully:", response.data);
-
-          Alert.alert(
-            "Éxito", 
-            patternId 
-              ? `Restricción creada con autenticación biométrica (Patrón: ${patternId.slice(-6)})`
-              : "Restricción creada sin autenticación adicional",
-            [{ text: "OK", onPress: () => {
-              if (onSave) onSave();
-              navigation.goBack();
-            }}]
-          );
-        } catch (restrictionError) {
-          console.error("Error saving restriction:", restrictionError);
-          handleRestrictionError(restrictionError);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      // Proceder con la creación de la restricción
-      await proceedWithoutBiometrics();
+      await proceedWithRestriction(newRestriction);
 
     } catch (error) {
       console.error("Unexpected error:", error);
       Alert.alert("Error", "Ocurrió un error inesperado");
+      setLoading(false);
+    }
+  };
+
+  const proceedWithRestriction = async (restrictionData) => {
+    try {
+      console.log("Saving restriction:", JSON.stringify(restrictionData, null, 2));
+
+      const response = await accountService.addAccountRestriction(
+        accountId,
+        restrictionData
+      );
+
+      console.log("Restriction saved successfully:", response.data);
+
+      Alert.alert(
+        "Éxito",
+        restrictionData.patron_autenticacion
+          ? `Restricción creada con autenticación biométrica (Patrón: ${restrictionData.patron_autenticacion.slice(-6)})`
+          : "Restricción creada sin autenticación adicional",
+        [{
+          text: "OK", onPress: () => {
+            if (onSave) onSave();
+            navigation.goBack();
+          }
+        }]
+      );
+    } catch (restrictionError) {
+      console.error("Error saving restriction:", restrictionError);
+      handleRestrictionError(restrictionError);
+    } finally {
       setLoading(false);
     }
   };
@@ -185,8 +236,8 @@ const CreateRestrictionScreen = () => {
         "Sesión expirada",
         "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
         [
-          { 
-            text: "OK", 
+          {
+            text: "OK",
             onPress: () => navigation.reset({
               index: 0,
               routes: [{ name: 'Login' }],
@@ -202,8 +253,8 @@ const CreateRestrictionScreen = () => {
     } else {
       Alert.alert(
         "Error",
-        error.response?.data?.message || 
-        error.message || 
+        error.response?.data?.message ||
+        error.message ||
         "No se pudo crear la restricción"
       );
     }
@@ -274,7 +325,7 @@ const CreateRestrictionScreen = () => {
               onChangeText={(text) => {
                 setFromAmount(text);
                 if (errors.fromAmount) {
-                  setErrors({...errors, fromAmount: null});
+                  setErrors({ ...errors, fromAmount: null });
                 }
               }}
               style={styles.input}
@@ -304,7 +355,7 @@ const CreateRestrictionScreen = () => {
               onChangeText={(text) => {
                 setToAmount(text);
                 if (errors.toAmount) {
-                  setErrors({...errors, toAmount: null});
+                  setErrors({ ...errors, toAmount: null });
                 }
               }}
               style={styles.input}
@@ -388,8 +439,8 @@ const CreateRestrictionScreen = () => {
 
       {/* Botón de agregar huella */}
       {!isFormLoading && (
-        <TouchableOpacity 
-          style={[styles.addButton, fingerprints.length > 0 && styles.addButtonSecondary]} 
+        <TouchableOpacity
+          style={[styles.addButton, fingerprints.length > 0 && styles.addButtonSecondary]}
           onPress={handleAddFingerprint}
         >
           {fingerprints.length > 0 ? (
@@ -423,9 +474,9 @@ const CreateRestrictionScreen = () => {
           disabled={isFormLoading}
         />
         {isFormLoading && (
-          <ActivityIndicator 
-            size="small" 
-            color="#FFFFFF" 
+          <ActivityIndicator
+            size="small"
+            color="#FFFFFF"
             style={styles.buttonLoader}
           />
         )}
@@ -634,7 +685,7 @@ const styles = StyleSheet.create({
   },
   saveButtonContainer: {
     position: 'absolute',
-    bottom: 0, 
+    bottom: 0,
     left: 0,
     right: 0,
     padding: 10,

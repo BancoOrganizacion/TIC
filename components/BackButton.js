@@ -6,7 +6,7 @@ const BackButton = ({ onPress }) => {
     <TouchableOpacity onPress={onPress} style={styles.button}>
       <View style={styles.circle}>
         <Image
-          source={{ uri: "https://cdn-icons-png.flaticon.com/512/271/271220.png" }} // URL del ícono de flecha hacia atrás
+          source={{ uri: "https://cdn-icons-png.flaticon.com/512/271/271220.png" }}
           style={styles.icon}
         />
       </View>

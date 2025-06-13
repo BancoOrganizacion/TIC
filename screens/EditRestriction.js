@@ -61,7 +61,6 @@ const EditRestrictionScreen = () => {
   const loadCurrentPattern = async () => {
     setLoadingPatterns(true);
     try {
-      // Si la restricción tiene un patrón de autenticación, buscarlo en los datos quemados
       if (restriction.patron_autenticacion) {
         const currentPattern = mockPatterns.find(
           pattern => pattern._id === restriction.patron_autenticacion
@@ -112,11 +111,9 @@ const EditRestrictionScreen = () => {
         monto_hasta: parseFloat(toAmount),
       };
 
-      // Solo incluir patron_autenticacion si hay huellas seleccionadas
       if (fingerprints.length > 0 && fingerprints[0]._id) {
         updatedData.patron_autenticacion = fingerprints[0]._id;
       } else {
-        // Si no hay huellas, enviar null para eliminar el patrón existente
         updatedData.patron_autenticacion = null;
       }
       

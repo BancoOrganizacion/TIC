@@ -138,7 +138,6 @@ const RegistrationScreen = () => {
     return true;
   };
 
-  // Función de validación de contraseña mejorada
   const validatePassword = (value) => {
     handleChange("password", value);
     
@@ -414,8 +413,8 @@ const RegistrationScreen = () => {
       title="Registro" 
       onBackPress={handleGoBack}
       contentContainerStyle={styles.contentContainer}
-      showNavBar={false}  // No mostrar navbar en pantalla de registro
-      showGreeting={false} // No mostrar greeting en pantalla de registro
+      showNavBar={false}  
+      showGreeting={false} 
     >
       <FormField
         label="Nombre*"

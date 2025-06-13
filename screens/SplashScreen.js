@@ -9,7 +9,7 @@ const SplashScreen = ({ navigation }) => {
       navigation.replace("Login");
     }, 5000);
 
-    return () => clearTimeout(timer); // Limpia el temporizador al desmontar
+    return () => clearTimeout(timer); 
   }, [navigation]);
 
   return (

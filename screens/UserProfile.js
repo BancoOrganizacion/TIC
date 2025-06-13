@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#F5F5F5", // Fondo gris claro para el icono
+    backgroundColor: "#F5F5F5",
   },
   formContainer: {
     paddingHorizontal: 20,

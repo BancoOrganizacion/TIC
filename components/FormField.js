@@ -2,21 +2,20 @@ import React from "react";
 import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity } from "react-native";
 
 /**
- * Componente FormField reutilizable para campos de formulario
  * 
- * @param {Object} props - Propiedades del componente
- * @param {string} props.label - Etiqueta del campo
- * @param {string} props.value - Valor actual del campo
- * @param {Function} props.onChangeText - Función para manejar cambios en el texto
- * @param {string} props.placeholder - Texto de placeholder
- * @param {string} props.errorMessage - Mensaje de error (si existe)
- * @param {boolean} props.isPassword - Indica si es un campo de contraseña
- * @param {boolean} props.isPasswordVisible - Indica si la contraseña está visible (solo para campos de contraseña)
- * @param {Function} props.togglePasswordVisibility - Función para alternar visibilidad de contraseña
- * @param {string} props.keyboardType - Tipo de teclado (por defecto 'default')
- * @param {boolean} props.autoCapitalize - Comportamiento de capitalización (por defecto 'sentences')
- * @param {number} props.maxLength - Longitud máxima de caracteres permitidos
- * @param {Object} props.style - Estilos adicionales para el campo
+ * @param {Object} props 
+ * @param {string} props.label 
+ * @param {string} props.value 
+ * @param {Function} props.onChangeText 
+ * @param {string} props.placeholder 
+ * @param {string} props.errorMessage 
+ * @param {boolean} props.isPassword 
+ * @param {boolean} props.isPasswordVisible 
+ * @param {Function} props.togglePasswordVisibility 
+ * @param {string} props.keyboardType 
+ * @param {boolean} props.autoCapitalize 
+ * @param {number} props.maxLength 
+ * @param {Object} props.style 
  */
 const FormField = ({
   label,
@@ -34,7 +33,6 @@ const FormField = ({
 }) => {
   const hasError = !!errorMessage;
   
-  // Función para renderizar el icono de ojo para contraseñas
   const renderPasswordIcon = () => {
     if (!isPassword) return null;
     
@@ -124,7 +122,7 @@ const styles = StyleSheet.create({
     tintColor: "#737373",
   },
   errorInput: {
-    borderColor: "#D32F2F", // Color rojo para campos con error
+    borderColor: "#D32F2F",
   },
   errorContainer: {
     flexDirection: "row",

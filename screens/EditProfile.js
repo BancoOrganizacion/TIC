@@ -51,7 +51,6 @@ const EditProfile = () => {
           }
         }
 
-        // Cargar nombre de usuario desde AsyncStorage
         const username = await AsyncStorage.getItem("nombre_usuario");
         if (username) {
           setReadOnlyData((prev) => ({ ...prev, nombre_usuario: username }));
@@ -158,7 +157,6 @@ const EditProfile = () => {
         telefono: userData.telefono,
       };
 
-      // Actualizar perfil en el backend
       const response = await userService.updateUserProfile(updateData);
 
       if (response.data) {
@@ -176,7 +174,6 @@ const EditProfile = () => {
 
         setOriginalUserData({ ...userData });
 
-        // Notificar éxito
         Alert.alert("Éxito", "Perfil actualizado correctamente", [
           {
             text: "OK",

@@ -97,14 +97,12 @@ const VerificationScreen = ({ route, navigation }) => {
       newCode[index] = value;
       setCode(newCode);
 
-      // Mover al siguiente campo si se ingresó un dígito
       if (value && index < 3) {
         setActiveInput(index + 1);
         // Auto focus next input
         inputRefs.current[index + 1].focus();
       }
 
-      // Si se completó el código, verificar automáticamente
       if (newCode.every((digit) => digit) && newCode.length === 4) {
         handleVerifyCode(newCode.join(""));
       }
@@ -132,7 +130,6 @@ const VerificationScreen = ({ route, navigation }) => {
   
       if (validationResponse.data?.valid) {
         try {
-          // Actualizar el rol del usuario al completar la verificación
           console.log("Updating user role from", userId, "to", finalRolId);
           await userService.updateUserRole(userId, finalRolId);
           
@@ -174,10 +171,8 @@ const VerificationScreen = ({ route, navigation }) => {
         setErrorMessage(
           "El código de verificación no coincide. Inténtalo de nuevo."
         );
-        // Limpiar los campos en caso de error
         setCode(["", "", "", ""]);
         setActiveInput(0);
-        // Focus first input after error
         inputRefs.current[0].focus();
       }
     } catch (error) {

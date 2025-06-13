@@ -17,7 +17,7 @@ import { biometricService } from "../services/api";
 const FingerprintsList = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   const [fingerprints, setFingerprints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,18 +29,17 @@ const FingerprintsList = () => {
   // Mapear tipos de dedos del backend a nombres descriptivos
   const fingerTypeMapping = {
     'PULGAR_DERECHO': 'Pulgar derecho',
-    'INDICE_DERECHO': 'Índice derecho', 
+    'INDICE_DERECHO': 'Índice derecho',
     'MEDIO_DERECHO': 'Medio derecho',
     'ANULAR_DERECHO': 'Anular derecho',
     'MENIQUE_DERECHO': 'Meñique derecho',
     'PULGAR_IZQUIERDO': 'Pulgar izquierdo',
     'INDICE_IZQUIERDO': 'Índice izquierdo',
-    'MEDIO_IZQUIERDO': 'Medio izquierdo', 
+    'MEDIO_IZQUIERDO': 'Medio izquierdo',
     'ANULAR_IZQUIERDO': 'Anular izquierdo',
     'MENIQUE_IZQUIERDO': 'Meñique izquierdo'
   };
 
-  // Cargar huellas al montar el componente
   useEffect(() => {
     loadFingerprints();
   }, []);
@@ -51,133 +50,26 @@ const FingerprintsList = () => {
       setLoading(true);
 
       console.log("Loading fingerprints from API");
-      
-      // Llamada al servicio corregido
+
       const response = await biometricService.getMyFingerprints();
-        console.log("API Response status:", response.status);
+      console.log("API Response status:", response.status);
       console.log("API Response data:", JSON.stringify(response.data, null, 2));
-      console.log("API Response data type:", typeof response.data);
-      console.log("API Response data is array:", Array.isArray(response.data));
-      
-      if (response.data !== null && response.data !== undefined) {
-        let fingerprintsData = [];
-        
-        // La respuesta puede venir en diferentes formatos, manejamos todos
-        if (Array.isArray(response.data)) {
-          console.log("Response is direct array");
-          fingerprintsData = response.data;
-        } else if (response.data.fingerprints && Array.isArray(response.data.fingerprints)) {
-          console.log("Response has fingerprints property");
-          fingerprintsData = response.data.fingerprints;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          console.log("Response has nested data property");
-          fingerprintsData = response.data.data;
-        } else if (typeof response.data === 'object' && response.data !== null) {
-          console.log("Response is object, checking for array properties");
-          // Buscar cualquier propiedad que sea un array
-          const arrayProps = Object.keys(response.data).filter(key => Array.isArray(response.data[key]));
-          if (arrayProps.length > 0) {
-            console.log("Found array properties:", arrayProps);
-            fingerprintsData = response.data[arrayProps[0]];
-          } else {
-            console.log("No array properties found, treating as empty");
-            fingerprintsData = [];
-          }
-        } else {
-          console.log("Formato de respuesta inesperado:", response.data);
-          fingerprintsData = [];
-        }        console.log("Fingerprints data to process:", fingerprintsData);
-        console.log("Number of fingerprints found:", fingerprintsData.length);
-        
-        // Filtrar elementos null antes del mapeo
-        const validFingerprintsData = fingerprintsData.filter(fp => fp !== null && fp !== undefined);
-        console.log("Valid fingerprints (non-null):", validFingerprintsData.length);
-        
-        if (validFingerprintsData.length === 0) {
-          console.log("No valid fingerprints found - all elements are null");
-          setFingerprints([]);
-          return;
-        }
 
-        // Mapear los datos de la API al formato esperado por el componente
-        const mappedFingerprints = validFingerprintsData.map((fingerprint, index) => {
-          console.log(`Processing fingerprint ${index}:`, JSON.stringify(fingerprint, null, 2));
-          
-          // Validar que el objeto tenga la estructura mínima esperada
-          if (!fingerprint || typeof fingerprint !== 'object') {
-            console.warn(`Fingerprint ${index} is not a valid object:`, fingerprint);
-            return null;
-          }
-          
-          const fingerprintId = fingerprint._id || fingerprint.id || `fingerprint-${index}`;
-          
-          // Verificar si esta huella ya está seleccionada
-          const isSelected = selectedFingerprints.some(selected => selected._id === fingerprintId);
-          
-          return {
-            id: fingerprintId,
-            _id: fingerprintId,
-            nombre: fingerTypeMapping[fingerprint.dedo] || fingerprint.nombre || fingerprint.dedo || `Huella ${index + 1}`,
-            descripcion: `Huella del ${(fingerTypeMapping[fingerprint.dedo] || fingerprint.dedo || 'dedo desconocido').toLowerCase()}`,
-            dedo: fingerprint.dedo,
-            calidad: fingerprint.calidad || fingerprint.quality || null,
-            template: fingerprint.template || fingerprint.huella,
-            fechaRegistro: fingerprint.fechaRegistro || fingerprint.createdAt || fingerprint.fechaCreacion,
-            selected: isSelected
-          };
-        }).filter(Boolean); // Filtrar elementos null
+      if (response.data && Array.isArray(response.data)) {
+        // Marcar como seleccionadas las huellas que ya estaban seleccionadas
+        const fingerprintsWithSelection = response.data.map(fingerprint => ({
+          ...fingerprint,
+          selected: selectedFingerprints.some(selected => selected._id === fingerprint._id)
+        }));
 
-        console.log("Mapped fingerprints:", mappedFingerprints);
-        console.log("Number of valid fingerprints:", mappedFingerprints.length);
-        setFingerprints(mappedFingerprints);
+        setFingerprints(fingerprintsWithSelection);
       } else {
-        console.log("No data in response");
-        setFingerprints([]);
+        console.error("Unexpected response format - not an array:", response.data);
+        setError("Error: Formato de respuesta inesperado del servidor");
       }
-
     } catch (error) {
       console.error("Error loading fingerprints:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response ? {
-          status: error.response.status,
-          data: error.response.data,
-        } : "No response",
-        config: error.config ? {
-          url: error.config.url,
-          method: error.config.method,
-        } : "No config"
-      });
-        let errorMessage = "Error al cargar las huellas. Por favor, intenta nuevamente.";
-      
-      if (error.response) {
-        console.error("Response error details:", {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-        
-        switch (error.response.status) {
-          case 401:
-            errorMessage = "Sesión expirada. Por favor, inicia sesión nuevamente.";
-            break;
-          case 404:
-            errorMessage = "No se encontraron huellas registradas. Registra tu primera huella para comenzar.";
-            setFingerprints([]); // Establecer como array vacío para mostrar estado sin huellas
-            break;
-          case 500:
-            errorMessage = "Error del servidor. Intenta más tarde.";
-            break;
-          default:
-            errorMessage = error.response.data?.message || `Error ${error.response.status}: ${error.response.statusText}`;
-        }
-      } else if (error.message.includes("Network")) {
-        errorMessage = "Error de conexión. Verifica tu internet.";
-      }
-      
-      setError(errorMessage);
-      setFingerprints([]);
+      setError(`Error al cargar huellas: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -190,14 +82,14 @@ const FingerprintsList = () => {
   };
 
   const toggleFingerprint = (id) => {
-    setFingerprints(fingerprints.map(fp => 
-      fp.id === id ? { ...fp, selected: !fp.selected } : fp
+    setFingerprints(fingerprints.map(fp =>
+      fp._id === id ? { ...fp, selected: !fp.selected } : fp
     ));
   };
 
   const handleConfirmSelection = () => {
     const selectedFingerprints = fingerprints.filter(fp => fp.selected);
-    
+
     if (selectedFingerprints.length === 0) {
       Alert.alert("Advertencia", "Por favor selecciona al menos una huella");
       return;
@@ -210,9 +102,9 @@ const FingerprintsList = () => {
         descripcion,
         dedo
       }));
-      
+
       console.log("Enviando huellas seleccionadas:", JSON.stringify(simplifiedFingerprints, null, 2));
-      
+
       route.params.onAdd(simplifiedFingerprints);
       navigation.goBack();
     } else {
@@ -223,14 +115,16 @@ const FingerprintsList = () => {
 
   const handleAddNewFingerprint = () => {
     Alert.alert(
-      "Registrar Nueva Huella", 
+      "Registrar Nueva Huella",
       "Esta funcionalidad te permitirá registrar una nueva huella dactilar.",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Continuar", onPress: () => {
-          console.log("Navegar a registro de huellas");
-          navigation.navigate('CreateRestriction');
-        }}
+        {
+          text: "Continuar", onPress: () => {
+            console.log("Navegar a registro de huellas");
+            navigation.navigate('CreateRestriction');
+          }
+        }
       ]
     );
   };
@@ -272,11 +166,11 @@ const FingerprintsList = () => {
     }
 
     return (
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             colors={["#5C2684"]}
             tintColor="#5C2684"
@@ -289,7 +183,7 @@ const FingerprintsList = () => {
 
         {fingerprints.map((fingerprint) => (
           <TouchableOpacity
-            key={fingerprint.id}  
+            key={fingerprint.id}
             style={[
               styles.fingerprintItem,
               fingerprint.selected && styles.selectedFingerprint
@@ -321,7 +215,7 @@ const FingerprintsList = () => {
         ))}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addButton}
             onPress={handleAddNewFingerprint}
             activeOpacity={0.7}
@@ -329,7 +223,7 @@ const FingerprintsList = () => {
             <Text style={styles.addButtonText}>+ Registrar Nueva Huella</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.confirmButton,
               fingerprints.filter(fp => fp.selected).length === 0 && styles.disabledButton

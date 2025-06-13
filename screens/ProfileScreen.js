@@ -23,7 +23,6 @@ const ProfileScreen = () => {
     try {
       setIsLoading(true);
 
-      // Obtener datos del usuario desde AsyncStorage (caché)
       const [storedProfile, storedUsername] = await Promise.all([
         AsyncStorage.getItem("userProfile"),
         AsyncStorage.getItem("nombre_usuario"),
@@ -31,7 +30,7 @@ const ProfileScreen = () => {
 
       if (storedProfile) {
         setUserData(JSON.parse(storedProfile));
-        setIsLoading(false); // Mostrar datos en caché mientras actualizamos
+        setIsLoading(false); 
       }
 
       // Obtener datos actualizados del backend
@@ -62,15 +61,12 @@ const ProfileScreen = () => {
   };
 
   useEffect(() => {
-    // Cargar datos al montar el componente
     fetchUserData();
 
-    // Configurar listener para actualizar datos cuando la pantalla reciba foco
     const unsubscribe = navigation.addListener("focus", () => {
       fetchUserData();
     });
 
-    // Limpiar el listener al desmontar
     return unsubscribe;
   }, [navigation]);
 
@@ -81,7 +77,6 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     try {
-      // Limpiar datos de autenticación
       await AsyncStorage.multiRemove([
         "token",
         "userProfile",
@@ -102,7 +97,6 @@ const ProfileScreen = () => {
     navigation.goBack();
   };
 
-  // Si está cargando, mostrar indicador dentro del layout
   if (isLoading) {
     return (
       <AppLayout 
@@ -126,7 +120,6 @@ const ProfileScreen = () => {
       onBackPress={handleBackPress}
       showGreeting={false}
     >
-      {/* Profile Image */}
       <View style={styles.profileImageContainer}>
         <Image
           source={require("../assets/images/user.png")}
@@ -145,7 +138,6 @@ const ProfileScreen = () => {
         )}
       </View>
 
-      {/* Personal Info Section */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Información Personal</Text>
 

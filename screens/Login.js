@@ -26,7 +26,6 @@ const LoginScreen = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigation = useNavigation();
 
-  // Verificar si hay un nombre de usuario guardado al cargar la pantalla
   useEffect(() => {
     const checkSavedUsername = async () => {
       try {
@@ -82,7 +81,6 @@ const LoginScreen = () => {
         credentials.password
       );
       
-      // Guardar el token en AsyncStorage
       if (response.data && response.data.access_token) {
         await AsyncStorage.setItem("token", response.data.access_token);
         await AsyncStorage.setItem("nombre_usuario", credentials.username);
@@ -100,7 +98,6 @@ const LoginScreen = () => {
           }
         }
         
-        // Navegar a la pantalla principal
         navigation.reset({
           index: 0,
           routes: [{ name: "Home" }],
