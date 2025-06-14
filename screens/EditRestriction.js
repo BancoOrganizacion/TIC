@@ -16,7 +16,7 @@ import BackButton from "../components/BackButton";
 import Greeting from "../components/Greeting";
 import BottomNavBar from "../components/BottomNavBar";
 import Button from "../components/Button";
-import { accountService } from "../services/api";
+import { accountService, biometricService } from "../services/api";
 
 const EditRestrictionScreen = () => {
   const navigation = useNavigation();
@@ -26,33 +26,8 @@ const EditRestrictionScreen = () => {
   const [fromAmount, setFromAmount] = useState(restriction.monto_desde.toString());
   const [toAmount, setToAmount] = useState(restriction.monto_hasta.toString());
   const [fingerprints, setFingerprints] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingPatterns, setLoadingPatterns] = useState(true);
+  const [loading, setLoading] = useState(false);  const [loadingPatterns, setLoadingPatterns] = useState(true);
   const [errors, setErrors] = useState({});
-
-  // Patrones de huellas quemados - coinciden con los de FingerprintsList
-  const mockPatterns = [
-    {
-      _id: "60d5ecb74e4e8d1b5cbf2456",
-      nombre: "Pulgar derecho",
-      descripcion: "Huella del pulgar de la mano derecha"
-    },
-    {
-      _id: "60d5ecb74e4e8d1b5cbf2457",
-      nombre: "Índice derecho",
-      descripcion: "Huella del dedo índice derecho"
-    },
-    {
-      _id: "60d5ecb74e4e8d1b5cbf2458",
-      nombre: "Pulgar izquierdo",
-      descripcion: "Huella del pulgar de la mano izquierda"
-    },
-    {
-      _id: "60d5ecb74e4e8d1b5cbf2459",
-      nombre: "Índice izquierdo",
-      descripcion: "Huella del dedo índice izquierdo"
-    }
-  ];
 
   useEffect(() => {
     loadCurrentPattern();
@@ -62,16 +37,57 @@ const EditRestrictionScreen = () => {
     setLoadingPatterns(true);
     try {
       if (restriction.patron_autenticacion) {
-        const currentPattern = mockPatterns.find(
-          pattern => pattern._id === restriction.patron_autenticacion
-        );
+        console.log("Loading current pattern:", restriction.patron_autenticacion);
         
-        if (currentPattern) {
-          setFingerprints([currentPattern]);
+        try {
+          // Intentar obtener detalles del patrón desde el backend
+          const patternDetails = await biometricService.getPatternDetails(restriction.patron_autenticacion);
+          
+          if (patternDetails.data) {
+            // Crear una representación del patrón para la UI
+            const patternForUI = {
+              _id: restriction.patron_autenticacion,
+              nombre: patternDetails.data.nombre || `Patrón ${restriction.patron_autenticacion.slice(-6)}`,
+              descripcion: patternDetails.data.descripcion || `Patrón con ${patternDetails.data.cantidadHuellas || 0} huellas`,
+              cantidadHuellas: patternDetails.data.cantidadHuellas || 0,
+              huellas: patternDetails.data.huellas || []
+            };
+            
+            setFingerprints([patternForUI]);
+            console.log("Current pattern loaded:", patternForUI);
+          } else {
+            // Si no se puede obtener detalles, crear información básica
+            const basicPattern = {
+              _id: restriction.patron_autenticacion,
+              nombre: `Patrón ${restriction.patron_autenticacion.slice(-6)}`,
+              descripcion: "Patrón biométrico existente",
+              cantidadHuellas: 0,
+              huellas: []
+            };
+            
+            setFingerprints([basicPattern]);
+            console.log("Basic pattern info created:", basicPattern);
+          }
+        } catch (patternError) {
+          console.warn("Could not load pattern details:", patternError);
+          
+          // En caso de error, crear información básica del patrón
+          const fallbackPattern = {
+            _id: restriction.patron_autenticacion,
+            nombre: `Patrón ${restriction.patron_autenticacion.slice(-6)}`,
+            descripcion: "Patrón biométrico existente",
+            cantidadHuellas: 0,
+            huellas: []
+          };
+          
+          setFingerprints([fallbackPattern]);
         }
+      } else {
+        setFingerprints([]);
       }
     } catch (error) {
       console.error("Error cargando patrón actual:", error);
+      setFingerprints([]);
     } finally {
       setLoadingPatterns(false);
     }

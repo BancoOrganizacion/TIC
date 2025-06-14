@@ -15,6 +15,59 @@ import { AppLayout } from "../components";
 import Button from "../components/Button";
 import { accountService, biometricService } from "../services/api";
 
+// Función de utilidad para diagnosticar problemas con huellas
+const diagnoseBiometricIssues = async () => {
+  try {
+    console.log("Diagnosing biometric issues...");
+    
+    // Diagnóstico básico de huellas
+    const diagnosis = await biometricService.diagnoseFingerprintIds();
+    
+    if (diagnosis.error) {
+      return {
+        canCreatePattern: false,
+        reason: `Error getting fingerprints: ${diagnosis.error}`,
+        suggestions: ["Verify internet connection", "Check authentication"]
+      };
+    }
+
+    if (diagnosis.totalFingerprints === 0) {
+      return {
+        canCreatePattern: false,
+        reason: "No fingerprints registered",
+        suggestions: ["Register fingerprints first"]
+      };
+    }
+
+    if (diagnosis.withValidIds === 0) {
+      return {
+        canCreatePattern: false,
+        reason: "No fingerprints have valid IDs",
+        suggestions: [
+          "Fingerprints may have been registered with an older system version",
+          "Try re-registering the fingerprints",
+          "Contact system administrator"
+        ]
+      };
+    }
+
+    return {
+      canCreatePattern: true,
+      validFingerprints: diagnosis.withValidIds,
+      totalFingerprints: diagnosis.totalFingerprints,
+      details: diagnosis
+    };
+
+  } catch (error) {
+    console.error("Error diagnosing biometric issues:", error);
+    return {
+      canCreatePattern: false,
+      reason: `Diagnosis failed: ${error.message}`,
+      suggestions: ["Check system connectivity"]
+    };
+  }
+};
+
 const CreateRestrictionScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -52,57 +105,60 @@ const CreateRestrictionScreen = () => {
 
 const createBiometricPattern = async (selectedFingerprints) => {
   try {
-    console.log("Creating biometric pattern with fingerprints:", selectedFingerprints.map(fp => fp._id));
+    console.log("Creating biometric pattern with fingerprints:", selectedFingerprints);
     
     if (!selectedFingerprints || selectedFingerprints.length === 0) {
       throw new Error("No hay huellas seleccionadas para crear el patrón");
     }
 
-    // Extraer los IDs de las huellas seleccionadas (DedoRegistrado IDs)
-    const fingerprintIds = selectedFingerprints.map(fp => fp._id);
+    // Validar que las huellas tengan IDs válidos
+    const fingerprintIds = selectedFingerprints.map(fp => fp._id || fp.id).filter(Boolean);
     
-    // Validar que todos los IDs sean válidos
+    if (fingerprintIds.length === 0) {
+      throw new Error("Las huellas seleccionadas no tienen identificadores válidos");
+    }
+
+    console.log("Extracted fingerprint IDs:", fingerprintIds);
+    
+    // Validar formato de ObjectIds de MongoDB
     const invalidIds = fingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
     if (invalidIds.length > 0) {
+      console.warn("Invalid fingerprint IDs found:", invalidIds);
       throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
     }
 
-    console.log("Sending fingerprint IDs to create pattern:", fingerprintIds);
+    // Usar el servicio correcto con los IDs de las huellas
+    console.log("Sending fingerprint IDs to backend:", fingerprintIds);
     const response = await biometricService.createPattern(fingerprintIds);
     
-    console.log("Pattern created successfully:", response.data);
-    
-    // El patrón creado puede venir en diferentes estructuras
-    let patternId = null;
-    
-    if (response.data) {
-      patternId = response.data._id || 
-                  response.data.id || 
-                  response.data.patron_id ||
-                  response.data.patronId ||
-                  (typeof response.data === 'string' ? response.data : null);
-      
-      console.log("Pattern response structure:", {
-        hasData: !!response.data,
-        dataType: typeof response.data,
-        keys: typeof response.data === 'object' ? Object.keys(response.data) : [],
-        extractedId: patternId
-      });
+    if (response.data && (response.data.id || response.data._id || response.data.patternId)) {
+      const patternId = response.data.id || response.data._id || response.data.patternId;
+      console.log("Pattern created successfully with ID:", patternId);
+      return patternId;
+    } else {
+      throw new Error("El backend no devolvió un ID de patrón válido");
     }
-
-    if (!patternId) {
-      console.error("No se pudo obtener el ID del patrón creado:", {
-        response: response.data,
-        status: response.status,
-        statusText: response.statusText
-      });
-      throw new Error("Error: No se recibió el ID del patrón creado");
-    }
-
-    console.log("Pattern ID extracted successfully:", patternId);
-    return patternId;
-  } catch (error) {
+    } catch (error) {
     console.error("Error creating biometric pattern:", error);
+    
+    // Mensaje más específico según el tipo de error
+    if (error.message && error.message.includes("IDs de huella inválidos")) {
+      throw new Error(
+        "Las huellas seleccionadas no tienen identificadores válidos en el sistema. " +
+        "Esto puede ocurrir si las huellas fueron registradas con una versión anterior del sistema. " +
+        "Por favor, registra nuevas huellas o contacta al administrador."
+      );
+    } else if (error.message && error.message.includes("identificadores válidos")) {
+      throw new Error(
+        "Las huellas deben ser registradas en el sistema antes de crear un patrón. " +
+        "Por favor, registra las huellas primero y luego intenta crear la restricción."
+      );
+    } else if (error.message && error.message.includes("No autorizado")) {
+      throw new Error("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+    } else if (error.message && error.message.includes("conexión")) {
+      throw new Error("Error de conexión. Verifica tu internet e intenta nuevamente.");
+    }
+    
     throw error;
   }
 };
@@ -126,14 +182,37 @@ const createBiometricPattern = async (selectedFingerprints) => {
       const newRestriction = {
         monto_desde: parseFloat(fromAmount),
         monto_hasta: parseFloat(toAmount),
-      };
-
-      let patternId = null;
+      };      let patternId = null;
 
       if (fingerprints.length > 0) {
         try {
           setCreatingPattern(true);
-          console.log("Creating pattern for restriction...");
+          console.log("Creating pattern for restriction...");          // Realizar diagnóstico antes de intentar crear el patrón
+          console.log("Running biometric diagnosis before pattern creation...");
+          const diagnosis = await diagnoseBiometricIssues();
+          
+          if (!diagnosis.canCreatePattern) {
+            console.warn("Biometric diagnosis failed:", diagnosis.reason);
+            
+            Alert.alert(
+              "Problema con las huellas biométricas",              `${diagnosis.reason}\n\nSugerencias:\n${diagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
+              [
+                { text: "Cancelar", style: "cancel" },
+                { 
+                  text: "Crear sin biometría", 
+                  onPress: () => {
+                    // Continuar sin patrón biométrico
+                    console.log("User chose to continue without biometric pattern");
+                    setFingerprints([]);
+                    setCreatingPattern(false);
+                  }
+                }
+              ]
+            );
+            return;
+          }
+
+          console.log(`Diagnosis passed: ${diagnosis.validFingerprints}/${diagnosis.totalFingerprints} valid fingerprints`);
 
           patternId = await createBiometricPattern(fingerprints);
           if (patternId) {
@@ -257,6 +336,41 @@ const createBiometricPattern = async (selectedFingerprints) => {
         error.message ||
         "No se pudo crear la restricción"
       );
+    }  };
+
+  // Función de debugging para probar el sistema biométrico manualmente
+  const handleBiometricDiagnosis = async () => {
+    try {
+      Alert.alert(
+        "Diagnóstico del Sistema Biométrico",
+        "Esto ejecutará un diagnóstico completo del sistema de huellas. ¿Continuar?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { 
+            text: "Ejecutar",            onPress: async () => {
+              console.log("Starting manual biometric diagnosis...");
+              
+              const diagnosis = await diagnoseBiometricIssues();
+              
+              let message = `Resultado del diagnóstico:\n\n`;
+              
+              if (diagnosis.canCreatePattern) {
+                message += `Sistema funcional\n`;
+                message += `Huellas válidas: ${diagnosis.validFingerprints}/${diagnosis.totalFingerprints}\n`;
+                message += `Puedes crear patrones biométricos.`;
+              } else {
+                message += `Problema detectado\n`;
+                message += `Razón: ${diagnosis.reason}\n\n`;
+                message += `Sugerencias:\n${diagnosis.suggestions.map(s => `• ${s}`).join('\n')}`;
+              }
+              
+              Alert.alert("Diagnóstico Completo", message);
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert("Error", `No se pudo ejecutar el diagnóstico: ${error.message}`);
     }
   };
 
@@ -269,10 +383,9 @@ const createBiometricPattern = async (selectedFingerprints) => {
       },
     });
   };
-
-  const handleDeleteFingerprint = (id) => {
-    console.log("Eliminando huella con id:", id);
-    setFingerprints((prev) => prev.filter((fp) => fp._id !== id));
+  const handleDeleteFingerprint = (index) => {
+    console.log("Eliminando huella con índice:", index);
+    setFingerprints((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleBackPress = () => {
@@ -402,9 +515,8 @@ const createBiometricPattern = async (selectedFingerprints) => {
               <Text style={styles.patternDescription}>
                 Se creará un nuevo patrón con las huellas seleccionadas
               </Text>
-            </View>
-            {fingerprints.map((fingerprint, index) => (
-              <View key={fingerprint._id} style={styles.fingerprintRow}>
+            </View>            {fingerprints.map((fingerprint, index) => (
+              <View key={`fingerprint-${index}-${fingerprint.nombre || fingerprint.dedo}`} style={styles.fingerprintRow}>
                 <Text style={styles.fingerprintNumber}>{index + 1}.</Text>
                 <Image
                   source={require("../assets/images/fingerprint.png")}
@@ -419,9 +531,8 @@ const createBiometricPattern = async (selectedFingerprints) => {
                     {fingerprint.descripcion}
                   </Text>
                 </View>
-                {!isFormLoading && (
-                  <TouchableOpacity
-                    onPress={() => handleDeleteFingerprint(fingerprint._id)}
+                {!isFormLoading && (                  <TouchableOpacity
+                    onPress={() => handleDeleteFingerprint(index)}
                     style={styles.deleteButton}
                   >
                     <Image
@@ -435,24 +546,32 @@ const createBiometricPattern = async (selectedFingerprints) => {
             ))}
           </>
         )}
-      </View>
-
-      {/* Botón de agregar huella */}
+      </View>      {/* Botón de agregar huella */}
       {!isFormLoading && (
-        <TouchableOpacity
-          style={[styles.addButton, fingerprints.length > 0 && styles.addButtonSecondary]}
-          onPress={handleAddFingerprint}
-        >
-          {fingerprints.length > 0 ? (
-            <Image
-              source={require("../assets/images/edit.png")}
-              resizeMode={"stretch"}
-              style={styles.editIcon}
-            />
-          ) : (
-            <Text style={styles.addButtonText}>+</Text>
+        <>
+          <TouchableOpacity
+            style={[styles.addButton, fingerprints.length > 0 && styles.addButtonSecondary]}
+            onPress={handleAddFingerprint}
+          >
+            {fingerprints.length > 0 ? (
+              <Image
+                source={require("../assets/images/edit.png")}
+                resizeMode={"stretch"}
+                style={styles.editIcon}
+              />
+            ) : (
+              <Text style={styles.addButtonText}>+</Text>
+            )}
+          </TouchableOpacity>          {/* Botón de diagnóstico - solo visible durante desarrollo */}
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: "#FF6B35", right: 90 }]}
+              onPress={handleBiometricDiagnosis}
+            >
+              <Text style={[styles.addButtonText, { fontSize: 18 }]}>?</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+        </>
       )}
 
       {/* Indicador de carga para el patrón */}

@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Image
-} from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { AppLayout } from "../components";
-import { biometricService } from "../services/api";
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl, Image, ActivityIndicator } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import AppLayout from '../components/AppLayout';
+import { biometricService } from '../services/api';
 
 const FingerprintsList = () => {
   const navigation = useNavigation();
@@ -22,6 +12,8 @@ const FingerprintsList = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  const [isToggling, setIsToggling] = useState(false);
 
   // Obtener huellas ya seleccionadas desde los parámetros de navegación
   const { selectedFingerprints = [], onAdd } = route.params || {};
@@ -42,33 +34,36 @@ const FingerprintsList = () => {
 
   useEffect(() => {
     loadFingerprints();
-  }, []);
-
-  const loadFingerprints = async () => {
+  }, []);  const loadFingerprints = async () => {
     try {
       setError(null);
       setLoading(true);
 
-      console.log("Loading fingerprints from API");
-
       const response = await biometricService.getMyFingerprints();
-      console.log("API Response status:", response.status);
-      console.log("API Response data:", JSON.stringify(response.data, null, 2));
 
       if (response.data && Array.isArray(response.data)) {
-        // Marcar como seleccionadas las huellas que ya estaban seleccionadas
-        const fingerprintsWithSelection = response.data.map(fingerprint => ({
-          ...fingerprint,
-          selected: selectedFingerprints.some(selected => selected._id === fingerprint._id)
-        }));
+        // Simplificar: solo procesar huellas sin generar IDs artificiales
+        const fingerprintsWithSelection = response.data.map((fingerprint, index) => {
+          // Buscar si esta huella estaba previamente seleccionada
+          const wasSelected = selectedFingerprints.some(selected => {
+            // Si ambos tienen _id, compararlos; sino, comparar por nombre
+            if (fingerprint._id && selected._id) {
+              return selected._id === fingerprint._id;
+            }
+            return selected.nombre === fingerprint.nombre;
+          });
+          
+          return {
+            ...fingerprint,
+            selected: wasSelected
+          };
+        });
 
         setFingerprints(fingerprintsWithSelection);
       } else {
-        console.error("Unexpected response format - not an array:", response.data);
         setError("Error: Formato de respuesta inesperado del servidor");
       }
     } catch (error) {
-      console.error("Error loading fingerprints:", error);
       setError(`Error al cargar huellas: ${error.message}`);
     } finally {
       setLoading(false);
@@ -79,15 +74,31 @@ const FingerprintsList = () => {
     setRefreshing(true);
     await loadFingerprints();
     setRefreshing(false);
-  };
+  };  const toggleFingerprint = useCallback((index) => {
+    if (isToggling) {
+      return;
+    }
 
-  const toggleFingerprint = (id) => {
-    setFingerprints(fingerprints.map(fp =>
-      fp._id === id ? { ...fp, selected: !fp.selected } : fp
-    ));
-  };
-
-  const handleConfirmSelection = () => {
+    setIsToggling(true);
+    
+    setFingerprints(prevFingerprints => {
+      if (typeof index !== 'number' || index < 0 || index >= prevFingerprints.length) {
+        setIsToggling(false);
+        return prevFingerprints;
+      }
+      
+      const updated = prevFingerprints.map((fp, i) => {
+        if (i === index) {
+          return { ...fp, selected: !fp.selected };
+        }
+        return fp;
+      });
+      
+      setTimeout(() => setIsToggling(false), 300);
+      
+      return updated;
+    });
+  }, [isToggling]);  const handleConfirmSelection = () => {
     const selectedFingerprints = fingerprints.filter(fp => fp.selected);
 
     if (selectedFingerprints.length === 0) {
@@ -95,17 +106,43 @@ const FingerprintsList = () => {
       return;
     }
 
-    if (route.params?.onAdd) {
-      const simplifiedFingerprints = selectedFingerprints.map(({ _id, nombre, descripcion, dedo }) => ({
-        _id,
-        nombre,
-        descripcion,
-        dedo
-      }));
+    // Validar que las huellas seleccionadas tengan IDs válidos
+    const invalidFingerprints = selectedFingerprints.filter(fp => 
+      !fp._id || !/^[0-9a-fA-F]{24}$/.test(fp._id)
+    );    if (invalidFingerprints.length > 0) {
+      console.warn("Invalid fingerprints detected");
+      Alert.alert(
+        "Problema con las huellas",
+        `${invalidFingerprints.length} de las huellas seleccionadas no tienen identificadores válidos. ` +
+        "Esto puede indicar que fueron registradas con una versión anterior del sistema. " +
+        "¿Deseas continuar de todos modos?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { 
+            text: "Continuar", 
+            onPress: () => {
+              // Filtrar solo las huellas válidas
+              const validFingerprints = selectedFingerprints.filter(fp => 
+                fp._id && /^[0-9a-fA-F]{24}$/.test(fp._id)
+              );
+              
+              if (validFingerprints.length === 0) {
+                Alert.alert("Error", "No hay huellas válidas para crear el patrón");
+                return;
+              }
 
-      console.log("Enviando huellas seleccionadas:", JSON.stringify(simplifiedFingerprints, null, 2));
-
-      route.params.onAdd(simplifiedFingerprints);
+              if (route.params?.onAdd) {
+                route.params.onAdd(validFingerprints);
+                navigation.goBack();
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }    if (route.params?.onAdd) {
+      // Enviar las huellas seleccionadas con sus IDs válidos
+      route.params.onAdd(selectedFingerprints);
       navigation.goBack();
     } else {
       console.error("onAdd callback no está definido");
@@ -176,20 +213,24 @@ const FingerprintsList = () => {
             tintColor="#5C2684"
           />
         }
-      >
-        <Text style={styles.subtitle}>
+      >        <Text style={styles.subtitle}>
           Selecciona las huellas requeridas para esta restricción ({fingerprints.filter(fp => fp.selected).length} seleccionadas)
-        </Text>
-
-        {fingerprints.map((fingerprint) => (
+        </Text>        {fingerprints.map((fingerprint, index) => (
           <TouchableOpacity
-            key={fingerprint.id}
+            key={`fingerprint-${index}`}
             style={[
               styles.fingerprintItem,
-              fingerprint.selected && styles.selectedFingerprint
-            ]}
-            onPress={() => toggleFingerprint(fingerprint.id)}
-            activeOpacity={0.7}
+              fingerprint.selected && styles.selectedFingerprint,
+              isToggling && styles.disabledFingerprint
+            ]}            onPress={() => {
+              if (isToggling) {
+                return;
+              }
+              
+              toggleFingerprint(index);
+            }}
+            disabled={isToggling}
+            activeOpacity={isToggling ? 1 : 0.7}
           >
             <View style={styles.fingerprintIcon}>
               <Image source={require('../assets/images/fingerprint.png')} style={styles.fingerprintImage} />
@@ -288,11 +329,13 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
-  },
-  selectedFingerprint: {
+  },  selectedFingerprint: {
     backgroundColor: "#E8F0FE",
     borderColor: "#5C2684",
     borderWidth: 2,
+  },
+  disabledFingerprint: {
+    opacity: 0.6,
   },
   fingerprintIcon: {
     width: 40,

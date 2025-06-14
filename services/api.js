@@ -157,14 +157,11 @@ export const accountService = {
     try {
       // Agregamos parámetros de consulta para paginación
       const { page, limit } = options;
-      console.log(`Solicitando transacciones para cuenta ${accountId}, página ${page}, límite ${limit}`);
-
-      const response = await apiPrivate.get(
+      console.log(`Solicitando transacciones para cuenta ${accountId}, página ${page}, límite ${limit}`);      const response = await apiPrivate.get(
         `/accounts/cuentas/${accountId}/movimientos`,
         { params: { page, limit } }
       );
       console.log("Account transactions response:", response.status);
-      console.log("DEBUGGING API - Response data:", JSON.stringify(response.data, null, 2));
 
       if (response.data && !response.data.pagination) {
         // Si la respuesta es un array directo
@@ -376,10 +373,77 @@ export const accountService = {
           nombre: "Huella Izquierda",
           descripcion: "Dedo índice izquierdo",
           requiere_autenticacion: true,
-        },
-      ],
+        },      ],
     };
   },
+
+  // Método de prueba para el flujo completo de restricciones
+  testRestrictionFlow: async (accountId) => {
+    try {
+      console.log("🧪 Testing restriction creation flow for account:", accountId);
+      
+      // 1. Obtener restricciones existentes
+      console.log("1️⃣ Getting existing restrictions...");
+      const existingRestrictions = await accountService.getAccountRestrictions(accountId);
+      console.log("✅ Existing restrictions:", existingRestrictions.data?.length || 0);
+      
+      // 2. Crear una restricción simple sin patrón
+      console.log("2️⃣ Creating simple restriction...");
+      const simpleRestriction = {
+        monto_desde: 0,
+        monto_hasta: 50
+      };
+      
+      const simpleRestrictionResponse = await accountService.addAccountRestriction(
+        accountId, 
+        simpleRestriction
+      );
+      console.log("✅ Simple restriction created:", simpleRestrictionResponse.data);
+      
+      // 3. Intentar crear restricción con patrón biométrico
+      console.log("3️⃣ Testing biometric restriction...");
+      try {
+        const patternTest = await biometricService.testPatternCreationFlow();
+        
+        if (patternTest.success) {
+          const biometricRestriction = {
+            monto_desde: 100,
+            monto_hasta: 1000,
+            patron_autenticacion: patternTest.patternId
+          };
+          
+          const biometricRestrictionResponse = await accountService.addAccountRestriction(
+            accountId,
+            biometricRestriction
+          );
+          console.log("✅ Biometric restriction created:", biometricRestrictionResponse.data);
+        } else {
+          console.log("⚠️ Skipping biometric restriction (no fingerprints or pattern creation failed)");
+        }
+      } catch (biometricError) {
+        console.warn("⚠️ Biometric restriction test failed:", biometricError.message);
+      }
+      
+      // 4. Verificar restricciones finales
+      console.log("4️⃣ Verifying final restrictions...");
+      const finalRestrictions = await accountService.getAccountRestrictions(accountId);
+      console.log("✅ Final restrictions count:", finalRestrictions.data?.length || 0);
+      
+      console.log("🎉 Restriction flow test completed!");
+      
+      return {
+        success: true,
+        initialCount: existingRestrictions.data?.length || 0,
+        finalCount: finalRestrictions.data?.length || 0
+      };
+      
+    } catch (error) {
+      console.error("❌ Restriction flow test failed:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }  },
 };
 
 // Servicios de autenticación
@@ -649,28 +713,27 @@ export const biometricService = {
       console.error("Error getting fingers by account:", error);
       throw error;
     }
-  },
-
-  // Obtener todas las huellas del usuario actual
+  },  // Obtener todas las huellas del usuario actual
   getMyFingerprints: async () => {
-    try {
-      console.log("Getting user fingerprints");
+    try {      console.log("Getting user fingerprints");
+      // Usar el endpoint que funciona: POST /fingerprints/get-fingers
       const response = await apiPrivate.post("/fingerprints/get-fingers");
       console.log("My fingerprints response:", response.status);
 
       // Formatear los datos para que coincidan con lo que espera tu UI
       if (response.data && Array.isArray(response.data)) {
-        response.data = response.data.map(fingerprint => ({
-          _id: fingerprint._id,
-          id: fingerprint._id, // Para compatibilidad con FingerprintsList
-          nombre: biometricService.getFingerTypeName(fingerprint.dedo),
-          descripcion: `Huella ${fingerprint.dedo.toLowerCase()}`,
-          dedo: fingerprint.dedo,
-          huella: fingerprint.huella,
-          fechaRegistro: fingerprint.createdAt,
-          calidad: 95, // Valor por defecto ya que no tienes este campo
-          selected: false // Para la UI de selección
-        }));
+        response.data = response.data.map((fingerprint, index) => {
+          return {
+            _id: fingerprint.dedo_patron_id, // El backend retorna dedo_patron_id
+            id: fingerprint.dedo_patron_id, // Para compatibilidad con FingerprintsList
+            nombre: biometricService.getFingerTypeName(fingerprint.dedo),
+            descripcion: `Huella ${fingerprint.dedo.toLowerCase()}`,
+            dedo: fingerprint.dedo,
+            fechaRegistro: new Date().toISOString(), // Valor por defecto
+            calidad: 95, // Valor por defecto ya que no tienes este campo
+            selected: false // Para la UI de selección
+          };
+        });
       }
 
       return response;
@@ -678,15 +741,19 @@ export const biometricService = {
       console.error("Error getting my fingerprints:", error);
       throw error;
     }
-  },  // ==================== ENDPOINTS DE PATTERNS ====================
-  
-  // Crear nuevo patrón de autenticación
+  },// ==================== ENDPOINTS DE PATTERNS ====================  // Crear nuevo patrón de autenticación
   createPattern: async (selectedFingerprintIds) => {
     try {
       console.log("Creating pattern with fingerprint IDs:", selectedFingerprintIds);
 
       if (!Array.isArray(selectedFingerprintIds) || selectedFingerprintIds.length === 0) {
         throw new Error("Se requiere al menos una huella para crear el patrón");
+      }
+
+      // Validar que todos los IDs sean válidos (formato ObjectId de MongoDB)
+      const invalidIds = selectedFingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
       }
 
       // Usar el endpoint /patterns con dedosPatronIds según la documentación del backend
@@ -706,6 +773,8 @@ export const biometricService = {
         throw new Error("No autorizado. Por favor, inicia sesión nuevamente.");
       } else if (error.response?.status === 500) {
         throw new Error("Error interno del servidor. Intenta nuevamente más tarde.");
+      } else if (error.message && error.message.includes("IDs de huella inválidos")) {
+        throw error; // Re-throw validation errors as-is
       } else {
         throw new Error("Error al crear el patrón. Verifica tu conexión a internet.");
       }
@@ -750,50 +819,72 @@ export const biometricService = {
       throw error;
     }
   },
-
   getPatternDetails: async (patternId) => {
     try {
       console.log("Getting pattern details:", patternId);
       
-      // Intentar primero con el endpoint de patterns
+      // Primero intentar obtener información básica del patrón
       try {
-        const response = await apiPrivate.get(`/patterns/${patternId}/dedos`);
+        const patternResponse = await apiPrivate.get(`/patterns/${patternId}`);
+        console.log("Pattern basic info:", patternResponse.data);
         
-        // Formatear los datos para mostrar en la UI
-        if (response.data && Array.isArray(response.data)) {
+        // Luego intentar obtener los dedos del patrón
+        try {
+          const fingersResponse = await apiPrivate.get(`/patterns/${patternId}/dedos`);
+          console.log("Pattern fingers:", fingersResponse.data);
+          
+          // Formatear los datos para mostrar en la UI
           const patternDetails = {
             _id: patternId,
             nombre: `Patrón ${patternId.slice(-6)}`,
-            descripcion: `Patrón con ${response.data.length} huellas`,
-            huellas: response.data.map(dedoPatron => ({
-              _id: dedoPatron._id,
-              nombre: biometricService.getFingerTypeName(dedoPatron.dedos_registrados?.dedo || 'DESCONOCIDO'),
-              descripcion: `Orden ${dedoPatron.orden}`,
-              orden: dedoPatron.orden
-            })),
-            cantidadHuellas: response.data.length,
-            fechaCreacion: response.data[0]?.createdAt || new Date().toISOString()
+            descripcion: `Patrón con ${fingersResponse.data?.dedos?.length || 0} huellas`,
+            huellas: fingersResponse.data?.dedos?.map((dedo, index) => ({
+              _id: dedo.id,
+              nombre: dedo.nombre || biometricService.getFingerTypeName(dedo.tipo || 'DESCONOCIDO'),
+              descripcion: `Huella ${index + 1}`,
+              calidad: dedo.calidad || 95
+            })) || [],
+            cantidadHuellas: fingersResponse.data?.dedos?.length || 0,
+            fechaCreacion: patternResponse.data?.fechaCreacion || new Date().toISOString(),
+            activo: patternResponse.data?.activo || true
           };
 
           return { data: patternDetails };
+          
+        } catch (fingersError) {
+          console.log("Could not get fingers details, using basic pattern info");
+          
+          // Si no podemos obtener los dedos, usar info básica del patrón
+          const patternDetails = {
+            _id: patternId,
+            nombre: `Patrón ${patternId.slice(-6)}`,
+            descripcion: `Patrón con ${patternResponse.data?.dedosPatronIds?.length || 0} huellas`,
+            huellas: [],
+            cantidadHuellas: patternResponse.data?.dedosPatronIds?.length || 0,
+            fechaCreacion: patternResponse.data?.fechaCreacion || new Date().toISOString(),
+            activo: patternResponse.data?.activo || true
+          };
+          
+          return { data: patternDetails };
         }
-      } catch (patternsError) {
-        console.log("Patterns endpoint not available for details, trying alternative...");
         
-        // Si el endpoint de patterns no funciona, crear información básica
+      } catch (patternError) {
+        console.log("Pattern endpoint not available, creating fallback info");
+        
+        // Si no podemos obtener información del patrón, crear información básica
         const patternDetails = {
           _id: patternId,
           nombre: `Patrón ${patternId.slice(-6)}`,
           descripcion: `Patrón biométrico`,
-          huellas: [], // No podemos obtener las huellas específicas
+          huellas: [],
           cantidadHuellas: 0,
-          fechaCreacion: new Date().toISOString()
+          fechaCreacion: new Date().toISOString(),
+          activo: true
         };
         
         return { data: patternDetails };
       }
 
-      return { data: null };
     } catch (error) {
       console.error("Error getting pattern details:", error);
       throw error;
@@ -897,13 +988,140 @@ export const biometricService = {
     };
     return mapping[fingerType] || fingerType;
   },
-
   // Obtener tipos de dedos disponibles
   getAvailableFingerTypes: () => {
     return [
       'PULGAR_DERECHO', 'INDICE_DERECHO', 'MEDIO_DERECHO', 'ANULAR_DERECHO', 'MENIQUE_DERECHO',
       'PULGAR_IZQUIERDO', 'INDICE_IZQUIERDO', 'MEDIO_IZQUIERDO', 'ANULAR_IZQUIERDO', 'MENIQUE_IZQUIERDO'
     ];
+  },  // Método de debugging para verificar la conexión completa
+  testPatternCreationFlow: async () => {
+    try {
+      console.log("Testing pattern creation flow...");
+      
+      // 1. Obtener huellas del usuario
+      console.log("Getting user fingerprints...");
+      const fingerprintsResponse = await biometricService.getMyFingerprints();
+      console.log("Fingerprints obtained:", fingerprintsResponse.data?.length || 0);
+      
+      if (!fingerprintsResponse.data || fingerprintsResponse.data.length === 0) {
+        throw new Error("No fingerprints found for user. Please register fingerprints first.");
+      }      // Debug detallado de las huellas
+      console.log("Detailed fingerprint analysis:");
+      fingerprintsResponse.data.forEach((fp, index) => {
+        console.log(`Fingerprint ${index + 1}: ${fp.nombre} (${fp.dedo}) - Valid ID: ${!!(fp._id && /^[0-9a-fA-F]{24}$/.test(fp._id))}`);
+      });
+
+      // Filtrar solo huellas con IDs válidos
+      const validFingerprints = fingerprintsResponse.data.filter(fp => 
+        fp._id && /^[0-9a-fA-F]{24}$/.test(fp._id)
+      );
+
+      console.log(`Valid fingerprints: ${validFingerprints.length}/${fingerprintsResponse.data.length}`);
+
+      if (validFingerprints.length === 0) {
+        throw new Error("No valid fingerprint IDs found. All fingerprints lack proper MongoDB ObjectId format.");
+      }
+      
+      // 2. Crear patrón con las huellas válidas disponibles
+      console.log("Creating pattern...");
+      const fingerprintIds = validFingerprints.slice(0, Math.min(5, validFingerprints.length)).map(fp => fp._id);
+      console.log("Using fingerprint IDs:", fingerprintIds);
+      
+      const patternResponse = await biometricService.createPattern(fingerprintIds);
+      console.log("Pattern created:", patternResponse.data);
+      
+      const patternId = patternResponse.data?.id || patternResponse.data?._id || patternResponse.data?.patternId;
+      if (!patternId) {
+        throw new Error("Pattern ID not found in response");
+      }
+      
+      // 3. Verificar que el patrón se creó correctamente
+      console.log("Verifying pattern...");
+      const patternDetails = await biometricService.getPatternDetails(patternId);
+      console.log("Pattern verified:", patternDetails.data);
+      
+      // 4. Obtener todos los patrones del usuario
+      console.log("Getting all user patterns...");
+      const allPatterns = await biometricService.getPatterns();
+      console.log("All patterns:", allPatterns.data?.length || 0);
+      
+      console.log("Pattern creation flow test completed successfully!");
+      
+      return {
+        success: true,
+        fingerprintsCount: fingerprintsResponse.data.length,
+        validFingerprintsCount: validFingerprints.length,
+        patternId: patternId,
+        patternsCount: allPatterns.data?.length || 0
+      };
+      
+    } catch (error) {
+      console.error("Pattern creation flow test failed:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // Nueva función para diagnosticar problemas con IDs de huellas
+  diagnoseFingerprintIds: async () => {
+    try {
+      console.log("Diagnosing fingerprint ID issues...");
+      
+      const response = await biometricService.getMyFingerprints();
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        return {
+          error: "No fingerprints data received from server",
+          details: response
+        };
+      }
+
+      const diagnosis = {
+        totalFingerprints: response.data.length,
+        withValidIds: 0,
+        withInvalidIds: 0,
+        withoutIds: 0,
+        fingerprints: []
+      };
+
+      response.data.forEach((fp, index) => {
+        const analysis = {
+          index: index + 1,
+          nombre: fp.nombre,
+          dedo: fp.dedo,
+          _id: fp._id,
+          hasId: !!fp._id,
+          idLength: fp._id ? fp._id.length : 0,
+          isValidObjectId: !!(fp._id && /^[0-9a-fA-F]{24}$/.test(fp._id)),
+          issues: []
+        };
+
+        if (!fp._id) {
+          analysis.issues.push("Missing _id field");
+          diagnosis.withoutIds++;
+        } else if (!/^[0-9a-fA-F]{24}$/.test(fp._id)) {
+          analysis.issues.push("Invalid ObjectId format");
+          diagnosis.withInvalidIds++;
+        } else {
+          diagnosis.withValidIds++;
+        }
+
+        diagnosis.fingerprints.push(analysis);
+      });
+
+      console.log("Diagnosis Results:", diagnosis);
+      return diagnosis;
+
+    } catch (error) {
+      console.error("Error diagnosing fingerprint IDs:", error);
+      return {
+        error: error.message,
+        success: false
+      };
+    }
   },
 };
 
@@ -926,12 +1144,8 @@ export const getFingerprintPatterns = async () => {
         idCuentaApp: pattern.idCuentaApp,
         activo: pattern.activo
       }))
-    };
-  } catch (error) {
+    };  } catch (error) {
     console.error("Error getting fingerprint patterns:", error);
     throw error;
   }
 };
-
-
- 
