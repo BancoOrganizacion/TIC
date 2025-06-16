@@ -106,6 +106,17 @@ const FingerprintsList = () => {
       return;
     }
 
+    if (selectedFingerprints.length < 3) {
+      Alert.alert(
+        "Huellas insuficientes", 
+        "Para mayor seguridad, se requiere seleccionar al menos 3 huellas para crear un patrón biométrico.",
+        [
+          { text: "Entendido", style: "default" }
+        ]
+      );
+      return;
+    }
+
     // Validar que las huellas seleccionadas tengan IDs válidos
     const invalidFingerprints = selectedFingerprints.filter(fp => 
       !fp._id || !/^[0-9a-fA-F]{24}$/.test(fp._id)
@@ -191,13 +202,9 @@ const FingerprintsList = () => {
       return (
         <View style={styles.centerContainer}>
           <View style={styles.emptyIcon} />
-          <Text style={styles.emptyTitle}>Sin huellas registradas</Text>
-          <Text style={styles.emptyText}>
-            Aún no tienes huellas dactilares registradas. Registra tu primera huella para poder crear patrones de autenticación.
+          <Text style={styles.emptyTitle}>Sin huellas registradas</Text>          <Text style={styles.emptyText}>
+            Aún no tienes huellas dactilares registradas.
           </Text>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddNewFingerprint}>
-            <Text style={styles.addButtonText}>Registrar Primera Huella</Text>
-          </TouchableOpacity>
         </View>
       );
     }
@@ -234,18 +241,9 @@ const FingerprintsList = () => {
           >
             <View style={styles.fingerprintIcon}>
               <Image source={require('../assets/images/fingerprint.png')} style={styles.fingerprintImage} />
-            </View>
-            <View style={styles.fingerprintInfo}>
+            </View>            <View style={styles.fingerprintInfo}>
               <Text style={styles.fingerprintName}>{fingerprint.nombre}</Text>
               <Text style={styles.fingerprintDesc}>{fingerprint.descripcion}</Text>
-              {fingerprint.calidad && (
-                <Text style={styles.qualityText}>Calidad: {fingerprint.calidad}%</Text>
-              )}
-              {fingerprint.fechaRegistro && (
-                <Text style={styles.dateText}>
-                  Registrado: {new Date(fingerprint.fechaRegistro).toLocaleDateString()}
-                </Text>
-              )}
             </View>
             {fingerprint.selected && (
               <View style={styles.checkIcon}>
@@ -253,17 +251,7 @@ const FingerprintsList = () => {
               </View>
             )}
           </TouchableOpacity>
-        ))}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddNewFingerprint}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.addButtonText}>+ Registrar Nueva Huella</Text>
-          </TouchableOpacity>
-
+        ))}        <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[
               styles.confirmButton,

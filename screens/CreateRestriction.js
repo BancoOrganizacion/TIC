@@ -323,11 +323,10 @@ const createBiometricPattern = async (selectedFingerprints) => {
             })
           }
         ]
-      );
-    } else if (error.response?.status === 400 && error.response?.data?.message?.includes("rangos solapados")) {
+      );    } else if (error.response?.status === 400 && error.response?.data?.message?.includes("rangos solapados")) {
       Alert.alert(
-        "Error",
-        "Los rangos de monto se solapan con una restricción existente. Por favor, verifica los valores."
+        "Error de Rango",
+        "Los rangos de monto se solapan con una restricción existente. Por favor, verifica los valores y elige un rango diferente."
       );
     } else {
       Alert.alert(
@@ -335,43 +334,7 @@ const createBiometricPattern = async (selectedFingerprints) => {
         error.response?.data?.message ||
         error.message ||
         "No se pudo crear la restricción"
-      );
-    }  };
-
-  // Función de debugging para probar el sistema biométrico manualmente
-  const handleBiometricDiagnosis = async () => {
-    try {
-      Alert.alert(
-        "Diagnóstico del Sistema Biométrico",
-        "Esto ejecutará un diagnóstico completo del sistema de huellas. ¿Continuar?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Ejecutar",            onPress: async () => {
-              console.log("Starting manual biometric diagnosis...");
-              
-              const diagnosis = await diagnoseBiometricIssues();
-              
-              let message = `Resultado del diagnóstico:\n\n`;
-              
-              if (diagnosis.canCreatePattern) {
-                message += `Sistema funcional\n`;
-                message += `Huellas válidas: ${diagnosis.validFingerprints}/${diagnosis.totalFingerprints}\n`;
-                message += `Puedes crear patrones biométricos.`;
-              } else {
-                message += `Problema detectado\n`;
-                message += `Razón: ${diagnosis.reason}\n\n`;
-                message += `Sugerencias:\n${diagnosis.suggestions.map(s => `• ${s}`).join('\n')}`;
-              }
-              
-              Alert.alert("Diagnóstico Completo", message);
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert("Error", `No se pudo ejecutar el diagnóstico: ${error.message}`);
-    }
+      );    }
   };
 
   const handleAddFingerprint = () => {
@@ -531,7 +494,8 @@ const createBiometricPattern = async (selectedFingerprints) => {
                     {fingerprint.descripcion}
                   </Text>
                 </View>
-                {!isFormLoading && (                  <TouchableOpacity
+                {!isFormLoading && (
+                  <TouchableOpacity
                     onPress={() => handleDeleteFingerprint(index)}
                     style={styles.deleteButton}
                   >
@@ -562,15 +526,7 @@ const createBiometricPattern = async (selectedFingerprints) => {
             ) : (
               <Text style={styles.addButtonText}>+</Text>
             )}
-          </TouchableOpacity>          {/* Botón de diagnóstico - solo visible durante desarrollo */}
-          {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: "#FF6B35", right: 90 }]}
-              onPress={handleBiometricDiagnosis}
-            >
-              <Text style={[styles.addButtonText, { fontSize: 18 }]}>?</Text>
-            </TouchableOpacity>
-          )}
+          </TouchableOpacity>
         </>
       )}
 
@@ -750,14 +706,14 @@ const styles = StyleSheet.create({
     color: "#737373",
     fontSize: 12,
     marginTop: 2,
-  },
-  deleteButton: {
-    padding: 8,
+  },  deleteButton: {
+    padding: 12,
+    borderRadius: 8,
   },
   deleteIcon: {
-    width: 21,
-    height: 25,
-    tintColor: "#000000",
+    width: 24,
+    height: 28,
+    tintColor: "#D32F2F",
   },
   addButton: {
     position: "absolute",

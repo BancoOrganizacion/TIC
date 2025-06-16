@@ -144,45 +144,53 @@ const RestrictionsList = () => {
             Agrega restricciones para controlar los montos de tus transacciones
           </Text>
         </View>
-      ) : (
-        restrictions.map((restriction) => (
-          <TouchableOpacity 
-            key={restriction._id} 
-            style={styles.restrictionCard}
-            onPress={() => handleEdit(restriction)}
-            onLongPress={() => handleDelete(restriction._id)}
-          >
-            <Image
-              source={require("../assets/images/money.png")}
-              resizeMode="contain"
-              style={styles.restrictionIcon}
-            />
-            <View style={styles.restrictionInfo}>
-              <Text style={styles.rangeText}>
-                {formatRangeText(
-                  restriction.monto_desde,
-                  restriction.monto_hasta
+      ) : (        restrictions.map((restriction) => (
+          <View key={restriction._id} style={styles.restrictionCard}>
+            <TouchableOpacity 
+              style={styles.restrictionContent}
+              onPress={() => handleEdit(restriction)}
+            >
+              <Image
+                source={require("../assets/images/money.png")}
+                resizeMode="contain"
+                style={styles.restrictionIcon}
+              />
+              <View style={styles.restrictionInfo}>
+                <Text style={styles.rangeText}>
+                  {formatRangeText(
+                    restriction.monto_desde,
+                    restriction.monto_hasta
+                  )}
+                </Text>
+                <Text style={styles.fingerprintsText}>
+                  {formatFingerprintsText(restriction)}
+                </Text>
+              </View>
+              <View style={styles.statusIndicator}>
+                {restriction.patron_autenticacion ? (
+                  <Image
+                    source={require("../assets/images/fingerprint.png")}
+                    style={styles.fingerprintIndicator}
+                  />
+                ) : (
+                  <View style={styles.noAuthIndicator} />
                 )}
-              </Text>
-              <Text style={styles.fingerprintsText}>
-                {formatFingerprintsText(restriction)}
-              </Text>
-            </View>
-            <View style={styles.statusIndicator}>
-              {restriction.patron_autenticacion ? (
-                <Image
-                  source={require("../assets/images/fingerprint.png")}
-                  style={styles.fingerprintIndicator}
-                />
-              ) : (
-                <View style={styles.noAuthIndicator} />
-              )}
-            </View>
-            <Image
-              source={require("../assets/images/chevron-right.png")}
-              style={styles.arrowIcon}
-            />
-          </TouchableOpacity>
+              </View>
+              <Image
+                source={require("../assets/images/chevron-right.png")}
+                style={styles.arrowIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={() => handleDelete(restriction._id)}
+            >
+              <Image
+                source={require("../assets/images/delete.png")}
+                style={styles.deleteIcon}
+              />
+            </TouchableOpacity>
+          </View>
         ))
       )}
 
@@ -246,8 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     paddingHorizontal: 32,
-  },
-  restrictionCard: {
+  },  restrictionCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -255,13 +262,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     paddingVertical: 17,
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 8,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  restrictionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingRight: 8,
   },
   restrictionIcon: {
     width: 33,
@@ -293,11 +307,20 @@ const styles = StyleSheet.create({
   noAuthIndicator: {
     width: 20,
     height: 20,
-  },
-  arrowIcon: {
+  },  arrowIcon: {
     width: 24,
     height: 24,
     tintColor: "#5C2684",
+  },
+  deleteButton: {
+    padding: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  deleteIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#D32F2F",
   },
   addButton: {
     position: "absolute",

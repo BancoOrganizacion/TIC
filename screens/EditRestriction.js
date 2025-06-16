@@ -507,13 +507,13 @@ const styles = StyleSheet.create({
     color: "#737373",
     fontSize: 12,
     marginTop: 2,
-  },
-  deleteButton: {
-    padding: 8,
+  },  deleteButton: {
+    padding: 12,
+    borderRadius: 8,
   },
   deleteIcon: {
-    width: 21,
-    height: 25,
+    width: 24,
+    height: 28,
     tintColor: "#D32F2F",
   },
   addButton: {
