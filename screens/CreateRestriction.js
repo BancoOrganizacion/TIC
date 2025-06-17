@@ -18,11 +18,9 @@ import { accountService, biometricService } from "../services/api";
 // Función de utilidad para diagnosticar problemas con huellas
 const diagnoseBiometricIssues = async () => {
   try {
-    console.log("Diagnosing biometric issues...");
-    
     // Diagnóstico básico de huellas
     const diagnosis = await biometricService.diagnoseFingerprintIds();
-    
+
     if (diagnosis.error) {
       return {
         canCreatePattern: false,
@@ -57,9 +55,7 @@ const diagnoseBiometricIssues = async () => {
       totalFingerprints: diagnosis.totalFingerprints,
       details: diagnosis
     };
-
   } catch (error) {
-    console.error("Error diagnosing biometric issues:", error);
     return {
       canCreatePattern: false,
       reason: `Diagnosis failed: ${error.message}`,
@@ -103,65 +99,56 @@ const CreateRestrictionScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-const createBiometricPattern = async (selectedFingerprints) => {
-  try {
-    console.log("Creating biometric pattern with fingerprints:", selectedFingerprints);
-    
-    if (!selectedFingerprints || selectedFingerprints.length === 0) {
-      throw new Error("No hay huellas seleccionadas para crear el patrón");
-    }
+  const createBiometricPattern = async (selectedFingerprints) => {
+    try {
+      if (!selectedFingerprints || selectedFingerprints.length === 0) {
+        throw new Error("No hay huellas seleccionadas para crear el patrón");
+      }
 
-    // Validar que las huellas tengan IDs válidos
-    const fingerprintIds = selectedFingerprints.map(fp => fp._id || fp.id).filter(Boolean);
-    
-    if (fingerprintIds.length === 0) {
-      throw new Error("Las huellas seleccionadas no tienen identificadores válidos");
-    }
+      // Validar que las huellas tengan IDs válidos
+      const fingerprintIds = selectedFingerprints.map(fp => fp._id || fp.id).filter(Boolean);
 
-    console.log("Extracted fingerprint IDs:", fingerprintIds);
-    
-    // Validar formato de ObjectIds de MongoDB
-    const invalidIds = fingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
-    if (invalidIds.length > 0) {
-      console.warn("Invalid fingerprint IDs found:", invalidIds);
-      throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
-    }
+      if (fingerprintIds.length === 0) {
+        throw new Error("Las huellas seleccionadas no tienen identificadores válidos");
+      }
 
-    // Usar el servicio correcto con los IDs de las huellas
-    console.log("Sending fingerprint IDs to backend:", fingerprintIds);
-    const response = await biometricService.createPattern(fingerprintIds);
-    
-    if (response.data && (response.data.id || response.data._id || response.data.patternId)) {
-      const patternId = response.data.id || response.data._id || response.data.patternId;
-      console.log("Pattern created successfully with ID:", patternId);
-      return patternId;
-    } else {
-      throw new Error("El backend no devolvió un ID de patrón válido");
-    }
+      // Validar formato de ObjectIds de MongoDB
+      const invalidIds = fingerprintIds.filter(id => !id || !/^[0-9a-fA-F]{24}$/.test(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`IDs de huella inválidos: ${invalidIds.join(', ')}`);
+      }
+
+      // Usar el servicio correcto con los IDs de las huellas
+      const response = await biometricService.createPattern(fingerprintIds);
+
+      if (response.data && (response.data.id || response.data._id || response.data.patternId)) {
+        const patternId = response.data.id || response.data._id || response.data.patternId;
+        return patternId;
+      } else {
+        throw new Error("El backend no devolvió un ID de patrón válido");
+      }
     } catch (error) {
-    console.error("Error creating biometric pattern:", error);
-    
-    // Mensaje más específico según el tipo de error
-    if (error.message && error.message.includes("IDs de huella inválidos")) {
-      throw new Error(
-        "Las huellas seleccionadas no tienen identificadores válidos en el sistema. " +
-        "Esto puede ocurrir si las huellas fueron registradas con una versión anterior del sistema. " +
-        "Por favor, registra nuevas huellas o contacta al administrador."
-      );
-    } else if (error.message && error.message.includes("identificadores válidos")) {
-      throw new Error(
-        "Las huellas deben ser registradas en el sistema antes de crear un patrón. " +
-        "Por favor, registra las huellas primero y luego intenta crear la restricción."
-      );
-    } else if (error.message && error.message.includes("No autorizado")) {
-      throw new Error("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
-    } else if (error.message && error.message.includes("conexión")) {
-      throw new Error("Error de conexión. Verifica tu internet e intenta nuevamente.");
+      // Mensaje más específico según el tipo de error
+      if (error.message && error.message.includes("IDs de huella inválidos")) {
+        throw new Error(
+          "Las huellas seleccionadas no tienen identificadores válidos en el sistema. " +
+          "Esto puede ocurrir si las huellas fueron registradas con una versión anterior del sistema. " +
+          "Por favor, registra nuevas huellas o contacta al administrador."
+        );
+      } else if (error.message && error.message.includes("identificadores válidos")) {
+        throw new Error(
+          "Las huellas deben ser registradas en el sistema antes de crear un patrón. " +
+          "Por favor, registra las huellas primero y luego intenta crear la restricción."
+        );
+      } else if (error.message && error.message.includes("No autorizado")) {
+        throw new Error("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      } else if (error.message && error.message.includes("conexión")) {
+        throw new Error("Error de conexión. Verifica tu internet e intenta nuevamente.");
+      }
+
+      throw error;
     }
-    
-    throw error;
-  }
-};
+  };
 
   const handleSave = async () => {
     if (!validateForm()) return;
@@ -182,7 +169,7 @@ const createBiometricPattern = async (selectedFingerprints) => {
       const newRestriction = {
         monto_desde: parseFloat(fromAmount),
         monto_hasta: parseFloat(toAmount),
-      };      let patternId = null;
+      }; let patternId = null;
 
       if (fingerprints.length > 0) {
         try {
@@ -190,16 +177,16 @@ const createBiometricPattern = async (selectedFingerprints) => {
           console.log("Creating pattern for restriction...");          // Realizar diagnóstico antes de intentar crear el patrón
           console.log("Running biometric diagnosis before pattern creation...");
           const diagnosis = await diagnoseBiometricIssues();
-          
+
           if (!diagnosis.canCreatePattern) {
             console.warn("Biometric diagnosis failed:", diagnosis.reason);
-            
             Alert.alert(
-              "Problema con las huellas biométricas",              `${diagnosis.reason}\n\nSugerencias:\n${diagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
+              "Problema con las huellas biométricas",
+              `${diagnosis.reason}\n\nSugerencias:\n${diagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
               [
                 { text: "Cancelar", style: "cancel" },
-                { 
-                  text: "Crear sin biometría", 
+                {
+                  text: "Crear sin biometría",
                   onPress: () => {
                     // Continuar sin patrón biométrico
                     console.log("User chose to continue without biometric pattern");
@@ -227,11 +214,12 @@ const createBiometricPattern = async (selectedFingerprints) => {
               console.warn("Could not get pattern details, but pattern was created:", detailsError);
               newRestriction.patron_autenticacion = patternId;
             }
-          }        } catch (patternError) {
+          }
+        } catch (patternError) {
           console.error("Error creating pattern:", patternError);
 
           let errorMessage = "No se pudo crear el patrón biométrico.";
-          
+
           if (patternError.message) {
             if (patternError.message.includes("Se requiere al menos una huella")) {
               errorMessage = "Debes seleccionar al menos una huella para crear el patrón.";
@@ -323,7 +311,8 @@ const createBiometricPattern = async (selectedFingerprints) => {
             })
           }
         ]
-      );    } else if (error.response?.status === 400 && error.response?.data?.message?.includes("rangos solapados")) {
+      );
+    } else if (error.response?.status === 400 && error.response?.data?.message?.includes("rangos solapados")) {
       Alert.alert(
         "Error de Rango",
         "Los rangos de monto se solapan con una restricción existente. Por favor, verifica los valores y elige un rango diferente."
@@ -334,7 +323,8 @@ const createBiometricPattern = async (selectedFingerprints) => {
         error.response?.data?.message ||
         error.message ||
         "No se pudo crear la restricción"
-      );    }
+      );
+    }
   };
 
   const handleAddFingerprint = () => {
@@ -706,7 +696,7 @@ const styles = StyleSheet.create({
     color: "#737373",
     fontSize: 12,
     marginTop: 2,
-  },  deleteButton: {
+  }, deleteButton: {
     padding: 12,
     borderRadius: 8,
   },

@@ -40,33 +40,39 @@ const LoginScreen = () => {
 
     checkSavedUsername();
   }, []);
-
   const handleChange = (field, value) => {
     setCredentials({
       ...credentials,
       [field]: value,
     });
 
-    // Limpiar error cuando el usuario escribe
+    // Limpiar errores cuando el usuario escribe
     if (errors[field]) {
-      setErrors({
-        ...errors,
-        [field]: null,
-      });
+      const newErrors = { ...errors };
+
+      // Si es un error de credenciales inválidas, limpiar ambos campos
+      if (errors[field] === "Usuario o contraseña incorrectos") {
+        newErrors.username = null;
+        newErrors.password = null;
+      } else {
+        newErrors[field] = null;
+      }
+
+      setErrors(newErrors);
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!credentials.username.trim()) {
       newErrors.username = "El nombre de usuario es requerido";
     }
-    
+
     if (!credentials.password) {
       newErrors.password = "La contraseña es requerida";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -80,24 +86,24 @@ const LoginScreen = () => {
         credentials.username,
         credentials.password
       );
-      
+
       if (response.data && response.data.access_token) {
         await AsyncStorage.setItem("token", response.data.access_token);
         await AsyncStorage.setItem("nombre_usuario", credentials.username);
         console.log("Login response data:", response.data);
-        
+
         // Save user profile if available in response
         if (response.data.usuario) {
           console.log("Saving user profile:", response.data.usuario);
           await AsyncStorage.setItem("userProfile", JSON.stringify(response.data.usuario));
-          
+
           // Save the real name specifically
           if (response.data.usuario.nombre) {
             console.log("Saving real name:", response.data.usuario.nombre);
             await AsyncStorage.setItem("nombreReal", response.data.usuario.nombre);
           }
         }
-        
+
         navigation.reset({
           index: 0,
           routes: [{ name: "Home" }],
@@ -106,19 +112,34 @@ const LoginScreen = () => {
         throw new Error("Token no recibido del servidor");
       }
     } catch (error) {
+      console.error("Login error:", error);
       console.error("Error de login:", error);
-      let errorMessage = "Usuario o contraseña incorrectos";
-      
-      if (error.response?.data?.message) {
+
+      let errorMessage = "Ha ocurrido un error inesperado";
+      let errorTitle = "Error de inicio de sesión";
+
+      if (error.response?.status === 401) {
+        errorTitle = "Credenciales inválidas";
+        errorMessage = "El usuario o contraseña ingresados son incorrectos. Por favor, verifica tus datos e intenta nuevamente.";
+
+        // Limpiar el campo de contraseña en caso de credenciales inválidas
+        setCredentials(prev => ({ ...prev, password: "" }));
+
+        // Mostrar error específico en los campos
+        setErrors({
+          username: "Usuario o contraseña incorrectos",
+          password: "Usuario o contraseña incorrectos"
+        });
+      } else if (error.response?.status === 500) {
+        errorTitle = "Error del servidor";
+        errorMessage = "Hay un problema con el servidor. Por favor, intenta más tarde.";
+      } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
-      Alert.alert(
-        "Error de inicio de sesión",
-        errorMessage
-      );
+
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setIsLoading(false);
     }

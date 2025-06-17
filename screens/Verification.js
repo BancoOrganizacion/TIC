@@ -39,7 +39,7 @@ const VerificationScreen = ({ route, navigation }) => {
     }
   }, [countdown]);
 
-  
+
   const handleOpenTelegram = async () => {
     if (!telegramLink) return;
 
@@ -80,7 +80,7 @@ const VerificationScreen = ({ route, navigation }) => {
       Alert.alert(
         "Error",
         "No se pudo reenviar el código" +
-          (error.response?.data?.message || error.message)
+        (error.response?.data?.message || error.message)
       );
     } finally {
       setIsLoading(false);
@@ -114,7 +114,7 @@ const VerificationScreen = ({ route, navigation }) => {
       setErrorMessage("Por favor ingresa el código completo");
       return;
     }
-  
+
     setIsLoading(true);
     setErrorMessage("");
     try {
@@ -122,17 +122,17 @@ const VerificationScreen = ({ route, navigation }) => {
         userId: userId.toString(),
         code: fullCode
       };
-      
+
       console.log("Validating with data:", validationData);
-      
+
       const validationResponse = await authService.validateVerificationCode(validationData);
       console.log("Validation response:", validationResponse.data);
-  
+
       if (validationResponse.data?.valid) {
         try {
           console.log("Updating user role from", userId, "to", finalRolId);
           await userService.updateUserRole(userId, finalRolId);
-          
+
           Alert.alert(
             "Verificación exitosa",
             "Tu cuenta ha sido verificada correctamente.",
@@ -177,21 +177,21 @@ const VerificationScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error("Verification error:", error);
-      
+
       // Mejor manejo del mensaje de error
       let errMsg = "Error al verificar el código";
       if (error.response?.data) {
         if (typeof error.response.data === "string") {
           errMsg = error.response.data;
         } else if (error.response.data.message) {
-          errMsg = typeof error.response.data.message === "string" 
-            ? error.response.data.message 
+          errMsg = typeof error.response.data.message === "string"
+            ? error.response.data.message
             : JSON.stringify(error.response.data.message);
         }
       } else if (error.message) {
         errMsg = error.message;
       }
-  
+
       setErrorMessage(errMsg);
       // Limpiar los campos en caso de error
       setCode(["", "", "", ""]);
@@ -263,10 +263,8 @@ const VerificationScreen = ({ route, navigation }) => {
                 ? "Reenviar código"
                 : `Reenviar código (${countdown}s)`}
             </Text>
-          </TouchableOpacity>
-        </View>
+          </TouchableOpacity>        </View>
 
-        {/* Mostramos el botón de abrir Telegram solo si existe un telegramLink */}
         {telegramLink && (
           <TouchableOpacity
             style={styles.telegramButton}

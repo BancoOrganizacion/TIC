@@ -30,7 +30,7 @@ const ProfileScreen = () => {
 
       if (storedProfile) {
         setUserData(JSON.parse(storedProfile));
-        setIsLoading(false); 
+        setIsLoading(false);
       }
 
       // Obtener datos actualizados del backend
@@ -99,11 +99,11 @@ const ProfileScreen = () => {
 
   if (isLoading) {
     return (
-      <AppLayout 
-        title="Perfil" 
+      <AppLayout
+        title="Perfil"
         showBack={true}
         onBackPress={handleBackPress}
-        showGreeting={false} 
+        showGreeting={false}
         scrollable={false}
       >
         <View style={styles.loadingContainer}>
@@ -114,8 +114,8 @@ const ProfileScreen = () => {
   }
 
   return (
-    <AppLayout 
-      title="Perfil" 
+    <AppLayout
+      title="Perfil"
       showBack={true}
       onBackPress={handleBackPress}
       showGreeting={false}
@@ -124,11 +124,9 @@ const ProfileScreen = () => {
         <Image
           source={require("../assets/images/user.png")}
           style={styles.profileImage}
-          resizeMode="contain"
-        />
+          resizeMode="contain" />
       </View>
 
-      {/* User Name */}
       <View style={styles.nameContainer}>
         <Text style={styles.nameText}>
           {userData?.nombre || "Nombre"} {userData?.apellido || "Apellido"}
@@ -153,11 +151,9 @@ const ProfileScreen = () => {
           <Text style={styles.menuText}>Tu perfil</Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
-
-        <TouchableOpacity
+        <View style={styles.separator} />        <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => navigation.navigate("TransactionHistory")}
+          onPress={() => navigation.navigate("AccountSelector")}
         >
           <Image
             source={require("../assets/images/transaction.png")}
@@ -166,11 +162,8 @@ const ProfileScreen = () => {
           />
           <Text style={styles.menuText}>Historial de transacciones</Text>
         </TouchableOpacity>
-      </View>
+      </View>      <View style={styles.fullSeparator} />
 
-      <View style={styles.fullSeparator} />
-
-      {/* Security Section */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Seguridad</Text>
 
@@ -199,11 +192,8 @@ const ProfileScreen = () => {
           />
           <Text style={styles.menuText}>Restricciones</Text>
         </TouchableOpacity>
-      </View>
+      </View>      <View style={styles.fullSeparator} />
 
-      <View style={styles.fullSeparator} />
-
-      {/* Logout Button */}
       <View style={styles.buttonContainer}>
         <Button
           title="Cerrar sesión"

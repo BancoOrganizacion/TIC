@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Image, Text, StyleSheet } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; 
+import { useFocusEffect } from '@react-navigation/native';
 
 const Greeting = ({ style }) => {
   const [name, setName] = useState("");
-  
+
   const getCurrentDate = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -13,7 +13,7 @@ const Greeting = ({ style }) => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}.${month}.${day}`;
   };
-  
+
   const loadUserName = async () => {
     try {
       const storedProfile = await AsyncStorage.getItem('userProfile');
@@ -28,31 +28,30 @@ const Greeting = ({ style }) => {
           console.error('Error parsing stored profile:', err);
         }
       }
-      
+
       const nombreReal = await AsyncStorage.getItem('nombreReal');
       if (nombreReal) {
         setName(nombreReal);
         return;
       }
-      
+
       setName("Usuario");
     } catch (error) {
       console.error('Error loading user name:', error);
       setName("Usuario");
     }
   };
-  
+
   useEffect(() => {
     loadUserName();
   }, []);
-  
+
   useFocusEffect(
     React.useCallback(() => {
       loadUserName();
-      return () => {}; 
+      return () => { };
     }, [])
   );
-  
   return (
     <View style={[styles.container, style]}>
       <Image
@@ -61,7 +60,7 @@ const Greeting = ({ style }) => {
       />
       <View style={styles.textContainer}>
         <Text style={styles.dateText}>{getCurrentDate()}</Text>
-        <Text style={styles.greetingText}>Hi, {name}!</Text>
+        <Text style={styles.greetingText}>Hi, {name || "Usuario"}!</Text>
       </View>
     </View>
   );

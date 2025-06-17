@@ -34,25 +34,25 @@ const Home = () => {
           const [profileResponse, accountsResponse] = await Promise.all([
             userService.getUserProfile().catch(e => {
               console.warn("Error loading profile, using cached data:", e);
-              return AsyncStorage.getItem("userProfile").then(stored => 
+              return AsyncStorage.getItem("userProfile").then(stored =>
                 stored ? { data: JSON.parse(stored) } : Promise.reject(e)
               );
             }),
             accountService.getMyAccounts().catch(e => {
               console.warn("Error loading accounts, using cached data:", e);
-              return AsyncStorage.getItem("userAccounts").then(stored => 
+              return AsyncStorage.getItem("userAccounts").then(stored =>
                 stored ? { data: JSON.parse(stored) } : { data: [] })
             })
           ]);
-    
+
           // Actualizar estado
           setUserProfile(profileResponse.data);
           setAccounts(accountsResponse.data || []);
-          
+
           // Guardar datos en caché
           await AsyncStorage.setItem("userProfile", JSON.stringify(profileResponse.data));
           await AsyncStorage.setItem("userAccounts", JSON.stringify(accountsResponse.data || []));
-          
+
         } catch (error) {
           console.error("Error loading data:", error);
           setError("Error al cargar los datos. Por favor, inténtalo de nuevo.");
@@ -62,12 +62,12 @@ const Home = () => {
       };
 
       loadData();
-      
+
     }, [])
   );
 
   const handleRestrictionsPress = (accountId) => {
-    navigation.navigate("RestrictionsList", { 
+    navigation.navigate("RestrictionsList", {
       accountId,
       onSave: refreshAccounts
     });
@@ -127,12 +127,12 @@ const Home = () => {
   const handleDeleteAccount = async (accountNumber) => {
     try {
       setLoading(true);
-      
+
       // Buscar la cuenta por número
-      const accountToDelete = accounts.find(acc => 
+      const accountToDelete = accounts.find(acc =>
         formatAccountNumber(acc.numero_cuenta) === accountNumber
       );
-      
+
       if (!accountToDelete) {
         Alert.alert("Error", "No se encontró la cuenta para eliminar");
         return;
@@ -140,24 +140,23 @@ const Home = () => {
 
       // Llamar al servicio para eliminar la cuenta
       await accountService.cancelAccount(accountToDelete._id);
-      
+
       // Refrescar la lista de cuentas
       await refreshAccounts();
-      
+
       Alert.alert("Éxito", "Cuenta eliminada correctamente");
     } catch (error) {
       console.error("Error eliminando cuenta:", error);
       Alert.alert(
-        "Error", 
+        "Error",
         error.response?.data?.message || "No se pudo eliminar la cuenta. Por favor, inténtalo de nuevo."
       );
     } finally {
       setLoading(false);
     }
   };
-
   const formatAccountNumber = (number) => {
-    return number ? `${number}`.padStart(10, "0") : "";
+    return number ? `${number}`.padStart(10, "0") : "0000000000";
   };
 
   const formatBalance = (balance) => {
@@ -178,50 +177,50 @@ const Home = () => {
   }
 
   return (
-    <AppLayout 
-      showHeader={false} 
+    <AppLayout
+      showHeader={false}
       scrollable={true}
     >
-      <View style={styles.content}>
-        {accounts.length > 0 ? (
-          <View style={styles.cardsContainer}>            {accounts.map((account, index) => (
-              <TouchableOpacity
-                key={account._id || index}
-                onPress={() => handleAccountPress(account._id)}
-              >
-                <AccountCard
-                  accountNumber={formatAccountNumber(account.numero_cuenta)}
-                  accountName={
-                    userProfile
-                      ? `${userProfile.nombre || ""} ${userProfile.apellido || ""}`
-                      : "Usuario"
-                  }
-                  accountType={
-                    account.tipo_cuenta === "AHORROS"
-                      ? "Ahorros"
-                      : "Corriente"
-                  }
-                  balance={formatBalance(account.monto_actual)}
-                  onDeleteAccount={handleDeleteAccount}
-                  style={styles.card}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.noAccountsContainer}>
-            <Image
-              source={require("../assets/images/empty-account.png")}
-              style={styles.noAccountsImage}
-            />
-            <Text style={styles.noAccountsText}>
-              No tienes cuentas bancarias.
-            </Text>
-            <Text style={styles.noAccountsSubtext}>
-              Crea tu primera cuenta para comenzar.
-            </Text>
-          </View>
-        )}
+      <View style={styles.content}>        {accounts.length > 0 ? (
+        <View style={styles.cardsContainer}>
+          {accounts.map((account, index) => (
+            <TouchableOpacity
+              key={account?._id || `account-${index}`}
+              onPress={() => handleAccountPress(account?._id)}
+            >
+              <AccountCard
+                accountNumber={formatAccountNumber(account?.numero_cuenta)}
+                accountName={
+                  userProfile?.nombre && userProfile?.apellido
+                    ? `${userProfile.nombre} ${userProfile.apellido}`
+                    : "Usuario"
+                }
+                accountType={
+                  account?.tipo_cuenta === "AHORROS"
+                    ? "Ahorros"
+                    : "Corriente"
+                }
+                balance={formatBalance(account?.monto_actual)}
+                onDeleteAccount={handleDeleteAccount}
+                style={styles.card}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.noAccountsContainer}>
+          <Image
+            source={require("../assets/images/empty-account.png")}
+            style={styles.noAccountsImage}
+          />
+          <Text style={styles.noAccountsText}>
+            No tienes cuentas bancarias.
+          </Text>
+          <Text style={styles.noAccountsSubtext}>
+            Crea tu primera cuenta para comenzar.
+          </Text>
+        </View>
+      )}
 
         {accounts.length < 2 && (
           <TouchableOpacity
@@ -264,7 +263,7 @@ const Home = () => {
             <Text style={styles.modalSubtitle}>
               Selecciona el tipo de cuenta que deseas crear:
             </Text>
-            
+
             <TouchableOpacity
               style={styles.accountTypeButton}
               onPress={() => createNewAccount("AHORROS")}
@@ -280,7 +279,7 @@ const Home = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.accountTypeButton}
               onPress={() => createNewAccount("CORRIENTE")}
@@ -296,7 +295,7 @@ const Home = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowAccountTypeModal(false)}

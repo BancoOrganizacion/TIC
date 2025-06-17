@@ -6,8 +6,9 @@ const BackButton = ({ onPress }) => {
     <TouchableOpacity onPress={onPress} style={styles.button}>
       <View style={styles.circle}>
         <Image
-          source={{ uri: "https://cdn-icons-png.flaticon.com/512/271/271220.png" }}
+          source={require("../assets/images/backbutton.png")}
           style={styles.icon}
+          resizeMode="contain"
         />
       </View>
     </TouchableOpacity>
@@ -24,14 +25,14 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
+    borderWidth: 1,    
     borderColor: "#D9D9D9",
     justifyContent: "center",
     alignItems: "center",
   },
   icon: {
-    width: 14,
-    height: 14,
+    width: 20,
+    height: 20,
   },
 });
 

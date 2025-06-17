@@ -4,6 +4,13 @@ import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity, Modal
 const AccountCard = ({ accountNumber, accountName, accountType, balance, onDeleteAccount }) => {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [showActionsModal, setShowActionsModal] = useState(false);
+
+  // Asegurar valores seguros para evitar undefined
+  const safeAccountNumber = accountNumber || "0000000000";
+  const safeAccountName = accountName || "Usuario";
+  const safeAccountType = accountType || "Ahorros";
+  const safeBalance = balance || "$0.00";
+
   const toggleBalanceVisibility = () => {
     setIsBalanceVisible(!isBalanceVisible);
   };
@@ -13,7 +20,7 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance, onDelet
   };
   const handleDeleteAccount = () => {
     setShowActionsModal(false);
-    
+
     // Verificar si el saldo es mayor a 0
     if (!isBalanceEmpty()) {
       Alert.alert(
@@ -42,29 +49,26 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance, onDelet
           style: "destructive",
           onPress: () => {
             if (onDeleteAccount) {
-              onDeleteAccount(accountNumber);
+              onDeleteAccount(safeAccountNumber);
             }
           }
         }
       ]
     );
   };
-
   // Función para verificar si el saldo está vacío o es 0
   const isBalanceEmpty = () => {
-    const cleanBalance = balance?.replace(/[^\d.-]/g, '') || '0';
+    const cleanBalance = safeBalance?.replace(/[^\d.-]/g, '') || '0';
     return parseFloat(cleanBalance) === 0;
   };
   return (
     <ImageBackground
       source={require("../assets/images/card.png")}
       resizeMode={"stretch"}
-      style={styles.card}
-    >
-      {/* Número de cuenta */}
+      style={styles.card}    >
       <View style={styles.row2}>
         <Text style={styles.text3}>{"N°"}</Text>
-        <Text style={styles.text4}>{accountNumber}</Text>
+        <Text style={styles.text4}>{safeAccountNumber}</Text>
         <View style={styles.box}></View>
         <TouchableOpacity onPress={handleActionsPress}>
           <Image
@@ -75,38 +79,33 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance, onDelet
         </TouchableOpacity>
       </View>
 
-      {/* Nombre del titular */}
-      <Text style={styles.text5}>{accountName}</Text>
+      <Text style={styles.text5}>{safeAccountName}</Text>
 
-      {/* Tipo de cuenta */}
       <View style={styles.row3}>
-        <Text style={styles.text6}>{accountType}</Text>
-        
+        <Text style={styles.text6}>{safeAccountType}</Text>
+
         <TouchableOpacity onPress={toggleBalanceVisibility}>
           <Image
             source={
-              isBalanceVisible 
+              isBalanceVisible
                 ? require("../assets/images/eye-visible.png")
                 : require("../assets/images/eye-hidden.png")
             }
             resizeMode={"stretch"}
             style={styles.image3}
-          />
-        </TouchableOpacity>
+          />        </TouchableOpacity>
       </View>
 
-      {/* Saldo */}
       <View style={styles.row4}>
         <Text style={styles.text7}>
-          {isBalanceVisible ? balance : '•••••••'}
-        </Text>        <Image
+          {isBalanceVisible ? safeBalance : '•••••••'}
+        </Text>
+        <Image
           source={require("../assets/images/chevron-right.png")}
           resizeMode={"stretch"}
           style={styles.image4}
-        />
-      </View>
+        />      </View>
 
-      {/* Modal de acciones */}
       <Modal
         visible={showActionsModal}
         transparent={true}
@@ -116,7 +115,7 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance, onDelet
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Acciones de cuenta</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={handleDeleteAccount}
             >
@@ -127,7 +126,7 @@ const AccountCard = ({ accountNumber, accountName, accountType, balance, onDelet
               />
               <Text style={styles.actionText}>Eliminar cuenta</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowActionsModal(false)}
             >
@@ -192,7 +191,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     marginRight: 4,
     flex: 1,
-  },  image4: {
+  }, image4: {
     width: 15,
     height: 23,
   },

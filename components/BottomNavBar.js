@@ -6,10 +6,12 @@ const BottomNavBar = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const currentScreen = route.name;
-
   // Función para determinar si un botón está activo
   const isActive = (screenName) => {
     if (screenName === "Home" && currentScreen === "Home") {
+      return true;
+    }
+    if (screenName === "AccountSelector" && (currentScreen === "AccountSelector" || currentScreen === "TransactionHistory")) {
       return true;
     }
     return currentScreen === screenName;
@@ -25,51 +27,44 @@ const BottomNavBar = () => {
     return [styles.navIcon, isActive(screenName) && styles.activeNavIcon];
   };
 
-  return (
-    <View style={styles.navContainer}>
-      <View style={styles.navBar}>
-        {/* Botón de Home */}
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => navigation.navigate("Home")}
-        >
-          <Image
-            source={require("../assets/images/home.png")}
-            style={getIconStyle("Home")}
-            resizeMode="contain"
-          />
-          <Text style={getTextStyle("Home")}>Inicio</Text>
-        </TouchableOpacity>
+  return (<View style={styles.navContainer}>
+    <View style={styles.navBar}>
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={() => navigation.navigate("Home")}
+      >
+        <Image
+          source={require("../assets/images/home.png")}
+          style={getIconStyle("Home")}
+          resizeMode="contain"
+        />          <Text style={getTextStyle("Home")}>Inicio</Text>
+      </TouchableOpacity>        <TouchableOpacity
+        style={styles.navButton}
+        onPress={() => navigation.navigate("AccountSelector")}
+      >
+        <Image
+          source={require("../assets/images/transfer.png")}
+          style={getIconStyle("AccountSelector")}
+          resizeMode="contain"
+        />
+        <Text style={getTextStyle("AccountSelector")}>Movimientos</Text>
+      </TouchableOpacity>
 
-        {/* Botón de Movimientos */}
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => navigation.navigate("TransactionHistory")}
-        >
-          <Image
-            source={require("../assets/images/transfer.png")}
-            style={getIconStyle("TransactionHistory")}
-            resizeMode="contain"
-          />
-          <Text style={getTextStyle("TransactionHistory")}>Movimientos</Text>
-        </TouchableOpacity>
-
-        {/* Botón de Perfil */}
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => navigation.navigate("ProfileScreen")}
-        >
-          <Image
-            source={require("../assets/images/profile.png")}
-            style={getIconStyle("ProfileScreen")}
-            resizeMode="contain"
-          />
-          <Text style={getTextStyle("ProfileScreen")}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.bottomSafeArea} />
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={() => navigation.navigate("ProfileScreen")}
+      >
+        <Image
+          source={require("../assets/images/profile.png")}
+          style={getIconStyle("ProfileScreen")}
+          resizeMode="contain"
+        />
+        <Text style={getTextStyle("ProfileScreen")}>Perfil</Text>
+      </TouchableOpacity>
     </View>
+
+    <View style={styles.bottomSafeArea} />
+  </View>
   );
 };
 

@@ -34,7 +34,7 @@ const FingerprintsList = () => {
 
   useEffect(() => {
     loadFingerprints();
-  }, []);  const loadFingerprints = async () => {
+  }, []); const loadFingerprints = async () => {
     try {
       setError(null);
       setLoading(true);
@@ -52,7 +52,7 @@ const FingerprintsList = () => {
             }
             return selected.nombre === fingerprint.nombre;
           });
-          
+
           return {
             ...fingerprint,
             selected: wasSelected
@@ -74,31 +74,31 @@ const FingerprintsList = () => {
     setRefreshing(true);
     await loadFingerprints();
     setRefreshing(false);
-  };  const toggleFingerprint = useCallback((index) => {
+  }; const toggleFingerprint = useCallback((index) => {
     if (isToggling) {
       return;
     }
 
     setIsToggling(true);
-    
+
     setFingerprints(prevFingerprints => {
       if (typeof index !== 'number' || index < 0 || index >= prevFingerprints.length) {
         setIsToggling(false);
         return prevFingerprints;
       }
-      
+
       const updated = prevFingerprints.map((fp, i) => {
         if (i === index) {
           return { ...fp, selected: !fp.selected };
         }
         return fp;
       });
-      
+
       setTimeout(() => setIsToggling(false), 300);
-      
+
       return updated;
     });
-  }, [isToggling]);  const handleConfirmSelection = () => {
+  }, [isToggling]); const handleConfirmSelection = () => {
     const selectedFingerprints = fingerprints.filter(fp => fp.selected);
 
     if (selectedFingerprints.length === 0) {
@@ -108,7 +108,7 @@ const FingerprintsList = () => {
 
     if (selectedFingerprints.length < 3) {
       Alert.alert(
-        "Huellas insuficientes", 
+        "Huellas insuficientes",
         "Para mayor seguridad, se requiere seleccionar al menos 3 huellas para crear un patrón biométrico.",
         [
           { text: "Entendido", style: "default" }
@@ -118,10 +118,9 @@ const FingerprintsList = () => {
     }
 
     // Validar que las huellas seleccionadas tengan IDs válidos
-    const invalidFingerprints = selectedFingerprints.filter(fp => 
+    const invalidFingerprints = selectedFingerprints.filter(fp =>
       !fp._id || !/^[0-9a-fA-F]{24}$/.test(fp._id)
-    );    if (invalidFingerprints.length > 0) {
-      console.warn("Invalid fingerprints detected");
+    ); if (invalidFingerprints.length > 0) {
       Alert.alert(
         "Problema con las huellas",
         `${invalidFingerprints.length} de las huellas seleccionadas no tienen identificadores válidos. ` +
@@ -129,14 +128,14 @@ const FingerprintsList = () => {
         "¿Deseas continuar de todos modos?",
         [
           { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Continuar", 
+          {
+            text: "Continuar",
             onPress: () => {
               // Filtrar solo las huellas válidas
-              const validFingerprints = selectedFingerprints.filter(fp => 
+              const validFingerprints = selectedFingerprints.filter(fp =>
                 fp._id && /^[0-9a-fA-F]{24}$/.test(fp._id)
               );
-              
+
               if (validFingerprints.length === 0) {
                 Alert.alert("Error", "No hay huellas válidas para crear el patrón");
                 return;
@@ -151,12 +150,11 @@ const FingerprintsList = () => {
         ]
       );
       return;
-    }    if (route.params?.onAdd) {
+    } if (route.params?.onAdd) {
       // Enviar las huellas seleccionadas con sus IDs válidos
       route.params.onAdd(selectedFingerprints);
       navigation.goBack();
     } else {
-      console.error("onAdd callback no está definido");
       Alert.alert("Error", "No se pudo completar la selección");
     }
   };
@@ -166,10 +164,8 @@ const FingerprintsList = () => {
       "Registrar Nueva Huella",
       "Esta funcionalidad te permitirá registrar una nueva huella dactilar.",
       [
-        { text: "Cancelar", style: "cancel" },
-        {
+        { text: "Cancelar", style: "cancel" }, {
           text: "Continuar", onPress: () => {
-            console.log("Navegar a registro de huellas");
             navigation.navigate('CreateRestriction');
           }
         }
@@ -229,11 +225,11 @@ const FingerprintsList = () => {
               styles.fingerprintItem,
               fingerprint.selected && styles.selectedFingerprint,
               isToggling && styles.disabledFingerprint
-            ]}            onPress={() => {
+            ]} onPress={() => {
               if (isToggling) {
                 return;
               }
-              
+
               toggleFingerprint(index);
             }}
             disabled={isToggling}
@@ -317,7 +313,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
-  },  selectedFingerprint: {
+  }, selectedFingerprint: {
     backgroundColor: "#E8F0FE",
     borderColor: "#5C2684",
     borderWidth: 2,
