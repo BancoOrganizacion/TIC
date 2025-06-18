@@ -27,9 +27,7 @@ const EditRestrictionScreen = () => {
   const [toAmount, setToAmount] = useState(restriction.monto_hasta.toString());
   const [fingerprints, setFingerprints] = useState([]);
   const [loading, setLoading] = useState(false);  const [loadingPatterns, setLoadingPatterns] = useState(true);
-  const [errors, setErrors] = useState({});
-
-  useEffect(() => {
+  const [errors, setErrors] = useState({});  useEffect(() => {
     loadCurrentPattern();
   }, []);
 
@@ -201,10 +199,9 @@ const EditRestrictionScreen = () => {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
+  return (    <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        <Greeting name="Ana" />
+        <Greeting />
 
         <View style={styles.titleContainer}>
           <BackButton onPress={() => navigation.goBack()} />

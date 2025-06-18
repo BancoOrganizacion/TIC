@@ -507,10 +507,9 @@ const TransactionHistory = () => {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No hay movimientos registrados</Text>
             </View>
-          )}
-
-          <ScrollView
+          )}          <ScrollView
             style={styles.transactionsList}
+            contentContainerStyle={styles.transactionsContent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
             }
@@ -522,34 +521,32 @@ const TransactionHistory = () => {
               }
             }}
             scrollEventThrottle={400}
-          >
-            {transactions.map((transaction) => (
-              <TouchableOpacity
-                key={transaction.id}
-                style={styles.transactionItem}
-                onPress={() => navigateToTransactionDetail(transaction)}
-              >
-                <View style={styles.transactionIconContainer}>
-                  <Image
-                    source={getTransactionIcon(transaction)}
-                    style={styles.transactionIcon}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionName}>{transaction.name}</Text>
-                  <Text style={styles.transactionDate}>{transaction.date}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    transaction.isIncome ? styles.incomeText : styles.expenseText,
-                  ]}
-                >
-                  {transaction.amount}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            showsVerticalScrollIndicator={false}          >
+            {transactions.length > 0 && (
+              <View style={styles.transactionsCard}>
+                {transactions.map((transaction, index) => (
+                  <View key={transaction.id}>
+                    <View style={styles.transactionContent}>
+                      <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionName}>{transaction.name}</Text>
+                        <Text style={styles.transactionDate}>{transaction.date}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.transactionAmount,
+                          transaction.isIncome ? styles.incomeText : styles.expenseText,
+                        ]}
+                      >
+                        {transaction.amount}
+                      </Text>
+                    </View>
+                    {index < transactions.length - 1 && (
+                      <View style={styles.transactionSeparator} />
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
 
             {loading && currentPage > 1 && (
               <View style={styles.loadingMoreContainer}>
@@ -564,9 +561,9 @@ const TransactionHistory = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: {
+const styles = StyleSheet.create({  mainContainer: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   loadingContainer: {
     flex: 1,
@@ -579,40 +576,86 @@ const styles = StyleSheet.create({
     color: "#737373",
   },
   accountCard: {
-    marginBottom: 24,
-  },
+    marginBottom: 15,
+  },  
   transactionsContainer: {
     flex: 1,
+    paddingHorizontal: 8,
+    marginTop: 20,
   },
   transactionsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 20,
     color: "#1C1B1F",
-  },
-  transactionsList: {
+    paddingHorizontal: 16,
+  },  transactionsList: {
     flex: 1,
-  },
-  errorContainer: {
+  },  transactionsContent: {
+    paddingHorizontal: 0,
+    paddingBottom: 20,
+  },errorContainer: {
     backgroundColor: "#FFEBEE",
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
+    marginHorizontal: 16,
   },
   errorText: {
     color: "#D32F2F",
     fontSize: 14,
     textAlign: "center",
+    fontWeight: "500",
   },
   emptyContainer: {
     padding: 40,
     alignItems: "center",
     justifyContent: "center",
+    marginHorizontal: 16,
   },
   emptyText: {
-    color: "#737373",
+    color: "#83898F",
     fontSize: 16,
     textAlign: "center",
+    fontWeight: "500",
+  },  transactionsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  transactionContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  transactionSeparator: {
+    height: 1,
+    backgroundColor: "#E8E8E8",
+    marginHorizontal: 20,
+  },
+  transactionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   transactionItem: {
     flexDirection: "row",
@@ -634,29 +677,28 @@ const styles = StyleSheet.create({
   transactionIcon: {
     width: 24,
     height: 24,
-  },
-  transactionInfo: {
+  },  transactionInfo: {
     flex: 1,
   },
   transactionName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1C1B1F",
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: "#83898F",
-  },
-  transactionAmount: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#1C1B1F",
+    marginBottom: 6,
   },
-  incomeText: {
-    color: "#34C759",
+  transactionDate: {
+    fontSize: 14,
+    color: "#83898F",
+    fontWeight: "400",
+  },
+  transactionAmount: {
+    fontSize: 18,
+    fontWeight: "700",
+  },  incomeText: {
+    color: "#00C853",
   },
   expenseText: {
-    color: "#FF3B30",
+    color: "#FF5252",
   },
   loadingMoreContainer: {
     padding: 16,

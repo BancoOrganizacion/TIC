@@ -177,50 +177,46 @@ const Home = () => {
   }
 
   return (
-    <AppLayout
-      showHeader={false}
-      scrollable={true}
-    >
-      <View style={styles.content}>        {accounts.length > 0 ? (
-        <View style={styles.cardsContainer}>
-          {accounts.map((account, index) => (
-            <TouchableOpacity
-              key={account?._id || `account-${index}`}
-              onPress={() => handleAccountPress(account?._id)}
-            >
-              <AccountCard
-                accountNumber={formatAccountNumber(account?.numero_cuenta)}
-                accountName={
-                  userProfile?.nombre && userProfile?.apellido
-                    ? `${userProfile.nombre} ${userProfile.apellido}`
-                    : "Usuario"
-                }
-                accountType={
-                  account?.tipo_cuenta === "AHORROS"
-                    ? "Ahorros"
-                    : "Corriente"
-                }
-                balance={formatBalance(account?.monto_actual)}
-                onDeleteAccount={handleDeleteAccount}
-                style={styles.card}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.noAccountsContainer}>
-          <Image
-            source={require("../assets/images/empty-account.png")}
-            style={styles.noAccountsImage}
-          />
-          <Text style={styles.noAccountsText}>
-            No tienes cuentas bancarias.
-          </Text>
-          <Text style={styles.noAccountsSubtext}>
-            Crea tu primera cuenta para comenzar.
-          </Text>
-        </View>
-      )}
+    <AppLayout showHeader={false} scrollable={true}>
+      <View style={styles.content}>
+        {accounts.length > 0 ? (
+          <View style={styles.cardsContainer}>
+            {accounts.map((account, index) => (
+              <TouchableOpacity
+                key={account?._id || `account-${index}`}
+                onPress={() => handleAccountPress(account?._id)}
+              >
+                <AccountCard
+                  accountNumber={formatAccountNumber(account?.numero_cuenta)}
+                  accountName={
+                    userProfile?.nombre && userProfile?.apellido
+                      ? `${userProfile.nombre} ${userProfile.apellido}`
+                      : "Usuario"
+                  }
+                  accountType={
+                    account?.tipo_cuenta === "AHORROS" ? "Ahorros" : "Corriente"
+                  }
+                  balance={formatBalance(account?.monto_actual)}
+                  onDeleteAccount={handleDeleteAccount}
+                  style={styles.card}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.noAccountsContainer}>
+            <Image
+              source={require("../assets/images/empty-account.png")}
+              style={styles.noAccountsImage}
+            />
+            <Text style={styles.noAccountsText}>
+              No tienes cuentas bancarias.
+            </Text>
+            <Text style={styles.noAccountsSubtext}>
+              Crea tu primera cuenta para comenzar.
+            </Text>
+          </View>
+        )}
 
         {accounts.length < 2 && (
           <TouchableOpacity

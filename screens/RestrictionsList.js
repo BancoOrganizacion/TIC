@@ -101,12 +101,12 @@ const RestrictionsList = () => {
   const handleBackPress = () => {
     navigation.goBack();
   };
-
   if (loading) {
     return (
       <AppLayout 
         title="Restricciones"
         onBackPress={handleBackPress}
+        showGreeting={true}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#5C2684" />
@@ -120,8 +120,10 @@ const RestrictionsList = () => {
     <AppLayout 
       title="Restricciones"
       onBackPress={handleBackPress}
+      showGreeting={true}
     >
-      {error && (
+        
+        {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={loadRestrictions}>

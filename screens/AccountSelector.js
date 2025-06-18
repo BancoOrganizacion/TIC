@@ -8,6 +8,7 @@ import {
     Alert,
     ScrollView,
     RefreshControl,
+    Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { AppLayout } from "../components";
@@ -17,33 +18,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const AccountSelector = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [accounts, setAccounts] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);    const [accounts, setAccounts] = useState([]);
     const [totalBalance, setTotalBalance] = useState(0);
-    const [userName, setUserName] = useState("Usuario");
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        loadUserInfo();
-        loadAccounts();
-    }, []);
-
-    const loadUserInfo = async () => {
-        try {
-            const userProfileString = await AsyncStorage.getItem("userProfile");
-            if (userProfileString) {
-                const userProfile = JSON.parse(userProfileString);
-                setUserName(userProfile.nombre || "Usuario");
-            } else {
-                const nombreReal = await AsyncStorage.getItem("nombreReal");
-                if (nombreReal) {
-                    setUserName(nombreReal);
-                }
-            }
-        } catch (error) {
-            console.error("Error cargando información del usuario:", error);
-        }
-    };
+        loadAccounts();    }, []);
 
     const loadAccounts = async () => {
         try {
@@ -150,18 +130,19 @@ const AccountSelector = () => {
 
     const handleBackPress = () => {
         navigation.goBack();
-    };
-
-    const getAccountTypeIcon = (accountType) => {
-        return accountType === "Corriente" ? "💳" : "💰";
-    };
-
-    if (loading) {
+    };    const getAccountTypeIcon = (accountType) => {
+        return (
+            <Image
+                source={require("../assets/images/savings-icon.png")}
+                style={styles.accountTypeIconImage}
+            />
+        );
+    };if (loading) {
         return (
             <AppLayout
                 title="Seleccionar Cuenta"
                 onBackPress={handleBackPress}
-                showGreeting={false}
+                showGreeting={true}
             >
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#0045B5" />
@@ -175,7 +156,7 @@ const AccountSelector = () => {
         <AppLayout
             title="Seleccionar Cuenta"
             onBackPress={handleBackPress}
-            showGreeting={false}
+            showGreeting={true}
         >
             <ScrollView
                 style={styles.container}
@@ -184,13 +165,10 @@ const AccountSelector = () => {
                 }
                 showsVerticalScrollIndicator={false}
             >
-                {/* Saludo personalizado */}
-                <View style={styles.greetingContainer}>
-                    <Text style={styles.greetingText}>Hola, {userName}</Text>
+                <View style={styles.subtitleContainer}>
                     <Text style={styles.subtitleText}>Selecciona una cuenta para ver sus movimientos</Text>
                 </View>
 
-                {/* Mensaje de error */}
                 {error && (
                     <View style={styles.errorContainer}>
                         <Text style={styles.errorText}>{error}</Text>
@@ -206,22 +184,25 @@ const AccountSelector = () => {
                                 style={styles.accountCard}
                                 onPress={() => handleAccountPress(account)}
                                 activeOpacity={0.7}
-                            >
-                                <View style={styles.accountHeader}>
+                            >                                <View style={styles.accountHeader}>
                                     <View style={styles.accountTypeContainer}>
-                                        <Text style={styles.accountTypeIcon}>
-                                            {getAccountTypeIcon(account.accountType)}
+                                        {getAccountTypeIcon(account.accountType)}
+                                        <Text style={styles.accountType}>
+                                            {account.accountType}
                                         </Text>
-                                        <Text style={styles.accountType}>{account.accountType}</Text>
                                     </View>
-                                    <Text style={styles.chevronIcon}>›</Text>
+                                    <View style={styles.chevronContainer}>
+                                        <Text style={styles.chevronIcon}>›</Text>
+                                    </View>
                                 </View>
 
                                 <View style={styles.accountInfo}>
                                     <Text style={styles.accountNumber}>
                                         **** **** **** {account.accountNumber.slice(-4)}
                                     </Text>
-                                    <Text style={styles.accountBalance}>{account.formattedBalance}</Text>
+                                    <Text style={styles.accountBalance}>
+                                        {account.formattedBalance}
+                                    </Text>
                                 </View>
                             </TouchableOpacity>
                         ))}
@@ -232,15 +213,11 @@ const AccountSelector = () => {
                 {!error && accounts.length > 1 && (
                     <View style={styles.totalContainer}>
                         <View style={styles.totalCard}>
-                            <Text style={styles.totalLabel}>Saldo Total</Text>
-                            <Text style={styles.totalAmount}>
+                            <Text style={styles.totalLabel}>Saldo Total</Text>                            <Text style={styles.totalAmount}>
                                 ${totalBalance.toLocaleString('es-CO', {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                 })}
-                            </Text>
-                            <Text style={styles.totalSubtext}>
-                                {accounts.length} cuenta{accounts.length > 1 ? 's' : ''} registrada{accounts.length > 1 ? 's' : ''}
                             </Text>
                         </View>
                     </View>
@@ -269,24 +246,18 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    },
-    loadingText: {
+    },    loadingText: {
         marginTop: 12,
         fontSize: 16,
         color: "#737373",
     },
-    greetingContainer: {
+    subtitleContainer: {
         marginBottom: 24,
-    },
-    greetingText: {
-        fontSize: 24,
-        fontWeight: "700",
-        color: "#1C1B1F",
-        marginBottom: 4,
     },
     subtitleText: {
         fontSize: 16,
         color: "#737373",
+        paddingHorizontal: 20,
     },
     errorContainer: {
         backgroundColor: "#FFEBEE",
@@ -301,46 +272,48 @@ const styles = StyleSheet.create({
     },
     accountsContainer: {
         marginBottom: 24,
-    },
-    accountCard: {
+    },    accountCard: {
         backgroundColor: "#FFFFFF",
+        borderColor: "#6B46C1",
         borderRadius: 16,
+        borderWidth: 1,
         padding: 20,
         marginBottom: 16,
-        borderWidth: 2,
-        borderColor: "#6B46C1",
         shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowRadius: 2,
+        elevation: 2,
     },
     accountHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 12,
-    },
-    accountTypeContainer: {
+    },    accountTypeContainer: {
         flexDirection: "row",
         alignItems: "center",
     },
-    accountTypeIcon: {
-        fontSize: 20,
+    accountTypeIconImage: {
+        width: 20,
+        height: 20,
         marginRight: 8,
-    },
-    accountType: {
+    },    accountType: {
         fontSize: 16,
         fontWeight: "600",
         color: "#6B46C1",
     },
+    chevronContainer: {
+        justifyContent: "center",
+        alignItems: "center",
+        width: 28,
+        height: 28,
+    },
     chevronIcon: {
-        fontSize: 24,
+        fontSize: 28,
         color: "#6B46C1",
         fontWeight: "bold",
+        includeFontPadding: false,
     },
     accountInfo: {
         alignItems: "flex-start",
@@ -371,16 +344,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#737373",
         marginBottom: 8,
-    },
-    totalAmount: {
+    },    totalAmount: {
         fontSize: 32,
         fontWeight: "700",
         color: "#6B46C1",
         marginBottom: 4,
-    },
-    totalSubtext: {
-        fontSize: 14,
-        color: "#737373",
     },
     emptyContainer: {
         flex: 1,

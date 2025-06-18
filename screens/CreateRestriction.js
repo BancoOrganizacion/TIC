@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppLayout } from "../components";
+import Greeting from "../components/Greeting";
 import Button from "../components/Button";
 import { accountService, biometricService } from "../services/api";
 
@@ -364,7 +365,6 @@ const CreateRestrictionScreen = () => {
   };
 
   const isFormLoading = loading || creatingPattern;
-
   return (
     <AppLayout
       title="Nueva restricción"
@@ -372,7 +372,8 @@ const CreateRestrictionScreen = () => {
       showGreeting={false}
       style={styles.appLayout}
     >
-      {/* Campos de monto */}
+      <Greeting />
+
       <View style={styles.amountContainer}>
         <View style={styles.amountInputContainer}>
           <Text style={styles.label}>Desde</Text>
@@ -530,7 +531,7 @@ const CreateRestrictionScreen = () => {
         </View>
       )}
 
-      {/* Botón de crear restricción */}
+
       <View style={styles.saveButtonContainer}>
         <Button
           title={getLoadingText()}

@@ -12,13 +12,13 @@ import BackButton from "./BackButton";
  * @param {Object} props.style 
  * @param {Object} props.titleStyle -
  */
-const Header = ({ 
-  title, 
-  onBackPress, 
+const Header = ({
+  title,
+  onBackPress,
   showBack = true,
   headerRight,
   style,
-  titleStyle 
+  titleStyle
 }) => {
   return (
     <View style={[styles.container, style]}>
@@ -29,9 +29,9 @@ const Header = ({
       ) : (
         <View style={styles.placeholderLeft} />
       )}
-      
+
       <Text style={[styles.title, titleStyle]}>{title}</Text>
-      
+
       {headerRight ? (
         <View style={styles.rightContainer}>
           {headerRight}

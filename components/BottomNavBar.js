@@ -37,8 +37,11 @@ const BottomNavBar = () => {
           source={require("../assets/images/home.png")}
           style={getIconStyle("Home")}
           resizeMode="contain"
-        />          <Text style={getTextStyle("Home")}>Inicio</Text>
-      </TouchableOpacity>        <TouchableOpacity
+        />
+        <Text style={getTextStyle("Home")}>Inicio</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={styles.navButton}
         onPress={() => navigation.navigate("AccountSelector")}
       >
