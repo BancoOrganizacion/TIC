@@ -111,48 +111,59 @@ export const accountService = {
     } catch (error) {
       throw error;
     }
-  },
-  // Get account transactions with pagination
+  },  // Get account transactions with pagination
   getAccountTransactions: async (accountId, options = { page: 1, limit: 10 }) => {
-    try {
-      // Agregamos parámetros de consulta para paginación
-      const { page, limit } = options;
-      console.log(`Solicitando transacciones para cuenta ${accountId}, página ${page}, límite ${limit}`); const response = await apiPrivate.get(
-        `/accounts/cuentas/${accountId}/movimientos`,
-        { params: { page, limit } }
-      );
-      console.log("Account transactions response:", response.status);
+    try {      const { page, limit } = options;
+      console.log(`Solicitando transacciones para cuenta ${accountId}, página ${page}, límite ${limit}`);
+      console.log(`DEBUGGING - accountId value: "${accountId}"`);
+      console.log(`DEBUGGING - accountId type: ${typeof accountId}`);
 
-      if (response.data && !response.data.pagination) {
-        // Si la respuesta es un array directo
-        if (Array.isArray(response.data)) {
-          response.data = {
-            data: response.data,
-            pagination: {
-              page,
-              limit,
-              total: response.data.length || 0,
-              pages: Math.ceil((response.data.length || 0) / limit)
-            }
-          };
+      // Asegurar que accountId es un string limpio sin duplicaciones
+      const cleanAccountId = accountId ? accountId.toString().trim() : '';
+      console.log(`DEBUGGING - cleanAccountId: "${cleanAccountId}"`);
+
+      // Usar el endpoint correcto del backend: /accounts/cuentas/movimientos con id_cuenta como query param
+      const response = await apiPrivate.get('/accounts/cuentas/movimientos', {
+        params: {
+          id_cuenta: cleanAccountId,
+          page,
+          limit
         }
-        // Si la respuesta es un objeto pero no tiene paginación
-        else if (typeof response.data === 'object' && !Array.isArray(response.data)) {
-          // Buscar arrays dentro del objeto que podrían ser las transacciones
-          const possibleTransactions = Object.values(response.data).find(value => Array.isArray(value)) || [];
-          response.data = {
-            data: possibleTransactions,
-            pagination: {
-              page,
-              limit,
-              total: possibleTransactions.length || 0,
-              pages: Math.ceil((possibleTransactions.length || 0) / limit)
-            }
-          };
+      });
+
+      console.log("Account transactions response:", response.status);
+      console.log("Transaction data structure:", typeof response.data, Array.isArray(response.data));
+
+      // El backend devuelve directamente un array de movimientos
+      let transactionData = [];
+
+      if (Array.isArray(response.data)) {
+        transactionData = response.data;
+      } else if (response.data && Array.isArray(response.data.movimientos)) {
+        transactionData = response.data.movimientos;
+      } else if (response.data && typeof response.data === 'object') {
+        // Buscar arrays dentro del objeto
+        const possibleArrays = Object.values(response.data).filter(value => Array.isArray(value));
+        if (possibleArrays.length > 0) {
+          transactionData = possibleArrays[0];
         }
       }
 
-      return response;
+      // Estructurar la respuesta de manera consistente
+      const structuredResponse = {
+        ...response,
+        data: {
+          data: transactionData,
+          pagination: {
+            page,
+            limit,
+            total: transactionData.length,
+            pages: Math.ceil(transactionData.length / limit)
+          }
+        }
+      };
+
+      return structuredResponse;
     } catch (error) {
       console.error("Error getting account transactions:", error);
       console.error("Error details:", {
